@@ -19,7 +19,7 @@ package gofpdf_test
 import (
 	"bufio"
 	"fmt"
-	"github.com/jung-kurt/gofpdf"
+	"github.com/marcusatbang/gofpdf"
 	"io/ioutil"
 	"math"
 	"net/http"
@@ -1424,4 +1424,36 @@ func ExampleFpdf_tutorial28() {
 	// Output:
 	// Successfully generated pdf/tutorial28.pdf
 
+}
+
+// This example demonstrates creating and using templates
+func ExampleFpdf_tutorial29() {
+	pdf := gofpdf.New("P", "mm", "A4", "")
+	pdf.SetCompression(false)
+	// pdf.SetFont("Times", "", 12)
+	template := pdf.CreateTemplate(func(tpl *gofpdf.Tpl) {
+		tpl.SetFont("Arial", "B", 16)
+		tpl.Text(60, 20, "Hello World!")
+		tpl.SetDrawColor(0, 100, 200)
+		tpl.SetLineWidth(2.5)
+		tpl.Line(120, 20, 140, 40)
+	})
+
+	pdf.SetDrawColor(200, 100, 0)
+	pdf.SetLineWidth(2.5)
+	pdf.SetFont("Arial", "B", 16)
+
+	pdf.AddPage()
+	pdf.UseTemplate(template)
+	pdf.Line(120, 20, 120, 40)
+	pdf.Cell(200, 40, "Page 1")
+
+	pdf.AddPage()
+	pdf.UseTemplate(template)
+	pdf.Line(120, 20, 140, 20)
+	pdf.Cell(200, 40, "Page 2")
+
+	pdf.OutputAndClose(docWriter(pdf, 29))
+	// Output:
+	// Successfully generated pdf/tutorial29.pdf
 }
