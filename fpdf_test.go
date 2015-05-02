@@ -19,7 +19,7 @@ package gofpdf_test
 import (
 	"bufio"
 	"fmt"
-	"github.com/marcusatbang/gofpdf"
+	"github.com/jung-kurt/gofpdf"
 	"io/ioutil"
 	"math"
 	"net/http"

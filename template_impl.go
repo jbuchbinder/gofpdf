@@ -45,27 +45,30 @@ func newTpl(corner PointType, size SizeType, unitStr, fontDirStr string, fn func
 	bytes := tpl.Fpdf.pages[tpl.Fpdf.page].Bytes()
 
 	id := generateTemplateID()
-	template := Fpdf_Tpl{id, corner, size, bytes}
+	template := FpdfTpl{id, corner, size, bytes}
 	return &template
 }
 
-// Fpdf_Tpl is a concrete implementation of the Template interface.
-type Fpdf_Tpl struct {
+// FpdfTpl is a concrete implementation of the Template interface.
+type FpdfTpl struct {
 	id     int64
 	corner PointType
 	size   SizeType
 	bytes  []byte
 }
 
-func (t *Fpdf_Tpl) ID() int64 {
+// ID returns the global template identifier
+func (t *FpdfTpl) ID() int64 {
 	return t.id
 }
 
-func (t *Fpdf_Tpl) Size() (corner PointType, size SizeType) {
+// Size gives the bounding dimensions of this template
+func (t *FpdfTpl) Size() (corner PointType, size SizeType) {
 	return t.corner, t.size
 }
 
-func (t *Fpdf_Tpl) Bytes() []byte {
+// Bytes returns the actual template data, not including resources
+func (t *FpdfTpl) Bytes() []byte {
 	return t.bytes
 }
 
@@ -98,13 +101,14 @@ func (t *Tpl) loadParamsFromFpdf(f *Fpdf) {
 	t.Fpdf.ws = f.ws
 }
 
-// Things you can't do to a template
-
+// AddPage does nothing because you cannot add pages to a template
 func (t *Tpl) AddPage() {
 }
 
+// AddPageFormat does nothign becasue you cannot add pages to a template
 func (t *Tpl) AddPageFormat(orientationStr string, size SizeType) {
 }
 
+// SetAutoPageBreak does nothing because you cannot add pages to a template
 func (t *Tpl) SetAutoPageBreak(auto bool, margin float64) {
 }

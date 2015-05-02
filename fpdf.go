@@ -3111,8 +3111,8 @@ func (f *Fpdf) putxobjectdict() {
 	}
 	for _, tpl := range f.templates {
 		id := tpl.ID()
-		if objId, ok := f.templateObjects[id]; ok {
-			f.outf("/TPL%d %d 0 R", id, objId)
+		if objID, ok := f.templateObjects[id]; ok {
+			f.outf("/TPL%d %d 0 R", id, objID)
 		}
 	}
 }

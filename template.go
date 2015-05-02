@@ -83,13 +83,13 @@ func (f *Fpdf) UseTemplateScaled(t Template, corner PointType, size SizeType) {
 	// fmt.Println(string(f.pages[f.page].Bytes()[:]))
 }
 
-var nextTemplateIDChannel chan int64 = func() chan int64 {
+var nextTemplateIDChannel = func() chan int64 {
 	ch := make(chan int64)
 	go func() {
-		var nextId int64 = 1
+		var nextID int64 = 1
 		for {
-			ch <- nextId
-			nextId++
+			ch <- nextID
+			nextID++
 		}
 	}()
 	return ch
@@ -134,7 +134,7 @@ func (f *Fpdf) putTemplates() {
 		// if ...
 
 		f.out(">>")
-		var buffer []byte = t.Bytes()
+		buffer := t.Bytes()
 		// fmt.Println("Put template bytes", string(buffer[:]))
 		if f.compress {
 			buffer = sliceCompress(buffer)
