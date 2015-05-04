@@ -266,8 +266,9 @@ func (f *Fpdf) UnicodeTranslatorFromDescriptor(cpStr string) (rep func(string) s
 	return
 }
 
-func (p *PointType) Transform(x, y float) PointType {
-	return PointType{p.X + x, p.Y + Y}
+// Transform moves a point by given X, Y offset
+func (p *PointType) Transform(x, y float64) PointType {
+	return PointType{p.X + x, p.Y + y}
 }
 
 // Orientation returns the orientation of a given size:
@@ -278,9 +279,8 @@ func (s *SizeType) Orientation() string {
 	}
 	if s.Wd > s.Ht {
 		return "L"
-	} else {
-		return "P"
 	}
+	return "P"
 }
 
 // ScaleBy expands a size by a certain factor
