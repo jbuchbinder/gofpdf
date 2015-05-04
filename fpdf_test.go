@@ -1438,6 +1438,7 @@ func ExampleFpdf_tutorial29() {
 		tpl.SetLineWidth(2.5)
 		tpl.Line(120, 20, 140, 40)
 	})
+	_, tplSize := template.Size()
 
 	pdf.SetDrawColor(200, 100, 0)
 	pdf.SetLineWidth(2.5)
@@ -1445,6 +1446,8 @@ func ExampleFpdf_tutorial29() {
 
 	pdf.AddPage()
 	pdf.UseTemplate(template)
+	pdf.UseTemplateScaled(template, gofpdf.PointType{0, 20}, tplSize)
+	pdf.UseTemplateScaled(template, gofpdf.PointType{0, 40}, tplSize)
 	pdf.Line(120, 20, 120, 40)
 	pdf.Cell(200, 40, "Page 1")
 
