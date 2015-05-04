@@ -5,7 +5,7 @@ package gofpdf
 //
 //    Copyright 2015 Marcus Downing
 //
-//  FPDI - Version 1.5.2
+//  FPDI
 //
 //    Copyright 2004-2014 Setasign - Jan Slabon
 //
@@ -21,17 +21,6 @@ package gofpdf
 //  See the License for the specific language governing permissions and
 //  limitations under the License.
 //
-
-import (
-	// "bytes"
-	"fmt"
-)
-
-const (
-// Name prefix of templates used in Resources dictionary. Have to begin with a /.
-// TEMPLATE_PREFIX          = "/TPL"
-// TEMPLATE_COMPRESS_FILTER = "/Filter /FlateDecode "
-)
 
 // CreateTemplate defines a new template using the current page size.
 func (f *Fpdf) CreateTemplate(fn func(*Tpl)) Template {
@@ -51,6 +40,10 @@ func CreateTemplate(corner PointType, size SizeType, unitStr, fontDirStr string,
 // UseTemplate adds a template to the current page or another template,
 // using the size and position at which it was originally written.
 func (f *Fpdf) UseTemplate(t Template) {
+	if t == nil {
+		f.SetErrorf("Template is nil")
+		return
+	}
 	corner, size := t.Size()
 	f.UseTemplateScaled(t, corner, size)
 }
@@ -58,9 +51,14 @@ func (f *Fpdf) UseTemplate(t Template) {
 // UseTemplateScaled adds a template to the current page or another template,
 // using the given page coordinates.
 func (f *Fpdf) UseTemplateScaled(t Template, corner PointType, size SizeType) {
+	if t == nil {
+		f.SetErrorf("Template is nil")
+		return
+	}
+
 	// You have to add at least a page first
 	if f.page <= 0 {
-		fmt.Println("No page!")
+		f.SetErrorf("Cannot use a template without first adding a page")
 		return
 	}
 
@@ -72,15 +70,10 @@ func (f *Fpdf) UseTemplateScaled(t Template, corner PointType, size SizeType) {
 	scaleX := size.Wd / templateSize.Wd
 	scaleY := size.Ht / templateSize.Ht
 	tx := corner.X * f.k
-	ty := corner.Y * f.k
+	ty := (f.curPageSize.Ht - corner.Y - templateSize.Ht) * f.k
 
-	// fmt.Printf("UseTemplateScaled: Writing to buffer (state = %d)\n", f.state)
-	// fmt.Printf("q %.4F 0 0 %.4F %.4F %.4F cm\n", scaleX, scaleY, tx, ty)
 	f.outf("q %.4F 0 0 %.4F %.4F %.4F cm", scaleX, scaleY, tx, ty) // Translate
-	// fmt.Printf("%s%d Do Q\n", TEMPLATE_PREFIX, t.ID())
 	f.outf("/TPL%d Do Q", t.ID())
-
-	// fmt.Println(string(f.pages[f.page].Bytes()[:]))
 }
 
 var nextTemplateIDChannel = func() chan int64 {
@@ -96,14 +89,14 @@ var nextTemplateIDChannel = func() chan int64 {
 }()
 
 // generateTemplateID gives the next template ID. These numbers are global so that they can never clash.
-func generateTemplateID() int64 {
+func GenerateTemplateID() int64 {
 	return <-nextTemplateIDChannel
 }
 
 // Template is an object that can be written to, then used and re-used any number of times within a document.
 type Template interface {
 	ID() int64
-	Size() (corner PointType, size SizeType)
+	Size() (PointType, SizeType)
 	Bytes() []byte
 }
 

@@ -5,7 +5,7 @@ package gofpdf
 //
 //    Copyright 2015 Marcus Downing
 //
-//  FPDI - Version 1.5.2
+//  FPDI
 //
 //    Copyright 2004-2014 Setasign - Jan Slabon
 //
@@ -44,7 +44,7 @@ func newTpl(corner PointType, size SizeType, unitStr, fontDirStr string, fn func
 	fn(&tpl)
 	bytes := tpl.Fpdf.pages[tpl.Fpdf.page].Bytes()
 
-	id := generateTemplateID()
+	id := GenerateTemplateID()
 	template := FpdfTpl{id, corner, size, bytes}
 	return &template
 }
