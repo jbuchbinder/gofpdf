@@ -1439,6 +1439,17 @@ func ExampleFpdf_tutorial29() {
 		tpl.Line(120, 20, 140, 40)
 	})
 	_, tplSize := template.Size()
+	// fmt.Println("Size:", tplSize)
+	// fmt.Println("Scaled:", tplSize.ScaleBy(1.5))
+
+	template2 := pdf.CreateTemplate(func(tpl *gofpdf.Tpl) {
+		tpl.UseTemplate(template)
+		subtemplate := tpl.CreateTemplate(func(tpl2 *gofpdf.Tpl) {
+			tpl.SetFont("Arial", "B", 16)
+			tpl2.Text(60, 100, "Subtemplate says hello")
+		})
+		tpl.UseTemplate(subtemplate)
+	})
 
 	pdf.SetDrawColor(200, 100, 0)
 	pdf.SetLineWidth(2.5)
@@ -1447,12 +1458,12 @@ func ExampleFpdf_tutorial29() {
 	pdf.AddPage()
 	pdf.UseTemplate(template)
 	pdf.UseTemplateScaled(template, gofpdf.PointType{0, 20}, tplSize)
-	pdf.UseTemplateScaled(template, gofpdf.PointType{0, 40}, tplSize)
+	pdf.UseTemplateScaled(template, gofpdf.PointType{0, 40}, tplSize.ScaleBy(1.4))
 	pdf.Line(120, 20, 120, 40)
 	pdf.Cell(200, 40, "Page 1")
 
 	pdf.AddPage()
-	pdf.UseTemplate(template)
+	pdf.UseTemplate(template2)
 	pdf.Line(120, 20, 140, 20)
 	pdf.Cell(200, 40, "Page 2")
 

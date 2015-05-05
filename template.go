@@ -64,13 +64,16 @@ func (f *Fpdf) UseTemplateScaled(t Template, corner PointType, size SizeType) {
 
 	// make a note of the fact that we actually use this template
 	f.templates[t.ID()] = t
+	for _, tt := range t.Templates() {
+		f.templates[tt.ID()] = tt
+	}
 
 	// template data
 	_, templateSize := t.Size()
 	scaleX := size.Wd / templateSize.Wd
 	scaleY := size.Ht / templateSize.Ht
 	tx := corner.X * f.k
-	ty := (f.curPageSize.Ht - corner.Y - templateSize.Ht) * f.k
+	ty := (f.curPageSize.Ht - corner.Y - size.Ht) * f.k
 
 	f.outf("q %.4F 0 0 %.4F %.4F %.4F cm", scaleX, scaleY, tx, ty) // Translate
 	f.outf("/TPL%d Do Q", t.ID())
@@ -88,7 +91,7 @@ var nextTemplateIDChannel = func() chan int64 {
 	return ch
 }()
 
-// generateTemplateID gives the next template ID. These numbers are global so that they can never clash.
+// GenerateTemplateID gives the next template ID. These numbers are global so that they can never clash.
 func GenerateTemplateID() int64 {
 	return <-nextTemplateIDChannel
 }
@@ -98,16 +101,19 @@ type Template interface {
 	ID() int64
 	Size() (PointType, SizeType)
 	Bytes() []byte
+	Templates() []Template
 }
 
+// putTemplates writes the templates to the PDF
 func (f *Fpdf) putTemplates() {
 	filter := ""
 	if f.compress {
 		filter = "/Filter /FlateDecode "
 	}
 
+	templates := sortTemplates(f.templates)
 	var t Template
-	for _, t = range f.templates {
+	for _, t = range templates {
 		corner, size := t.Size()
 
 		f.newobj()
@@ -120,13 +126,26 @@ func (f *Fpdf) putTemplates() {
 			f.outf("/Matrix [1 0 0 1 %.5F %.5F]", -corner.X*f.k*2, corner.Y*f.k*2)
 		}
 
-		// Resources
+		// Template's resource dictionary
 		f.out("/Resources ")
 		f.out("<</ProcSet [/PDF /Text /ImageB /ImageC /ImageI]")
 
-		// if ...
+		tTemplates := t.Templates()
+		if len(tTemplates) > 0 {
+			f.out("/XObject <<")
+			var tt Template
+			for _, tt = range tTemplates {
+				id := tt.ID()
+				if objID, ok := f.templateObjects[id]; ok {
+					f.outf("/TPL%d %d 0 R", id, objID)
+				}
+			}
+			f.out(">>")
+		}
 
 		f.out(">>")
+
+		//  Write the template's byte stream
 		buffer := t.Bytes()
 		// fmt.Println("Put template bytes", string(buffer[:]))
 		if f.compress {
@@ -136,4 +155,46 @@ func (f *Fpdf) putTemplates() {
 		f.putstream(buffer)
 		f.out("endobj")
 	}
+}
+
+// sortTemplates puts templates in a suitable order based on dependices
+func sortTemplates(templates map[int64]Template) []Template {
+	chain := make([]Template, 0, len(templates)*2)
+
+	// build a full set of dependency chains
+	for _, t := range templates {
+		tlist := templateChainDependencies(t)
+		for _, tt := range tlist {
+			if tt != nil {
+				chain = append(chain, tt)
+			}
+		}
+	}
+
+	// reduce that to make a simple list
+	sorted := make([]Template, 0, len(templates))
+chain:
+	for _, t := range chain {
+		for _, already := range sorted {
+			if t == already {
+				continue chain
+			}
+		}
+		sorted = append(sorted, t)
+	}
+
+	return sorted
+}
+
+//  templateChainDependencies is a recursive function for determining the full chain of template dependencies
+func templateChainDependencies(template Template) []Template {
+	requires := template.Templates()
+	chain := make([]Template, len(requires)*2)
+	for _, req := range requires {
+		for _, sub := range templateChainDependencies(req) {
+			chain = append(chain, sub)
+		}
+	}
+	chain = append(chain, template)
+	return chain
 }

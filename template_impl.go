@@ -43,18 +43,23 @@ func newTpl(corner PointType, size SizeType, unitStr, fontDirStr string, fn func
 	tpl.Fpdf.AddPage()
 	fn(&tpl)
 	bytes := tpl.Fpdf.pages[tpl.Fpdf.page].Bytes()
+	templates := make([]Template, 0, len(tpl.Fpdf.templates))
+	for _, t := range tpl.Fpdf.templates {
+		templates = append(templates, t)
+	}
 
 	id := GenerateTemplateID()
-	template := FpdfTpl{id, corner, size, bytes}
+	template := FpdfTpl{id, corner, size, bytes, templates}
 	return &template
 }
 
 // FpdfTpl is a concrete implementation of the Template interface.
 type FpdfTpl struct {
-	id     int64
-	corner PointType
-	size   SizeType
-	bytes  []byte
+	id        int64
+	corner    PointType
+	size      SizeType
+	bytes     []byte
+	templates []Template
 }
 
 // ID returns the global template identifier
@@ -70,6 +75,10 @@ func (t *FpdfTpl) Size() (corner PointType, size SizeType) {
 // Bytes returns the actual template data, not including resources
 func (t *FpdfTpl) Bytes() []byte {
 	return t.bytes
+}
+
+func (t *FpdfTpl) Templates() []Template {
+	return t.templates
 }
 
 // Tpl is an Fpdf used for writing a template.
