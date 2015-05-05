@@ -19,7 +19,7 @@ package gofpdf_test
 import (
 	"bufio"
 	"fmt"
-	"github.com/jung-kurt/gofpdf"
+	"github.com/marcusatbang/gofpdf"
 	"io/ioutil"
 	"math"
 	"net/http"
@@ -1432,11 +1432,12 @@ func ExampleFpdf_tutorial29() {
 	pdf.SetCompression(false)
 	// pdf.SetFont("Times", "", 12)
 	template := pdf.CreateTemplate(func(tpl *gofpdf.Tpl) {
+		tpl.Image(imageFile("logo.png"), 6, 6, 30, 0, false, "", 0, "")
 		tpl.SetFont("Arial", "B", 16)
-		tpl.Text(60, 20, "Hello World!")
+		tpl.Text(40, 20, "Template says hello")
 		tpl.SetDrawColor(0, 100, 200)
 		tpl.SetLineWidth(2.5)
-		tpl.Line(120, 20, 140, 40)
+		tpl.Line(95, 12, 105, 22)
 	})
 	_, tplSize := template.Size()
 	// fmt.Println("Size:", tplSize)
@@ -1445,8 +1446,12 @@ func ExampleFpdf_tutorial29() {
 	template2 := pdf.CreateTemplate(func(tpl *gofpdf.Tpl) {
 		tpl.UseTemplate(template)
 		subtemplate := tpl.CreateTemplate(func(tpl2 *gofpdf.Tpl) {
-			tpl.SetFont("Arial", "B", 16)
-			tpl2.Text(60, 100, "Subtemplate says hello")
+			tpl2.Image(imageFile("logo.png"), 6, 86, 30, 0, false, "", 0, "")
+			tpl2.SetFont("Arial", "B", 16)
+			tpl2.Text(40, 100, "Subtemplate says hello")
+			tpl2.SetDrawColor(0, 200, 100)
+			tpl2.SetLineWidth(2.5)
+			tpl2.Line(102, 92, 112, 102)
 		})
 		tpl.UseTemplate(subtemplate)
 	})
@@ -1457,17 +1462,40 @@ func ExampleFpdf_tutorial29() {
 
 	pdf.AddPage()
 	pdf.UseTemplate(template)
-	pdf.UseTemplateScaled(template, gofpdf.PointType{0, 20}, tplSize)
-	pdf.UseTemplateScaled(template, gofpdf.PointType{0, 40}, tplSize.ScaleBy(1.4))
-	pdf.Line(120, 20, 120, 40)
-	pdf.Cell(200, 40, "Page 1")
+	pdf.UseTemplateScaled(template, gofpdf.PointType{0, 30}, tplSize)
+	pdf.UseTemplateScaled(template, gofpdf.PointType{0, 60}, tplSize.ScaleBy(1.4))
+	pdf.Line(40, 210, 60, 210)
+	pdf.Text(40, 200, "Template example page 1")
 
 	pdf.AddPage()
 	pdf.UseTemplate(template2)
-	pdf.Line(120, 20, 140, 20)
-	pdf.Cell(200, 40, "Page 2")
+	pdf.Line(60, 210, 80, 210)
+	pdf.Text(40, 200, "Template example page 2")
 
 	pdf.OutputAndClose(docWriter(pdf, 29))
 	// Output:
 	// Successfully generated pdf/tutorial29.pdf
+}
+
+// This example demonstrates reading a page from an existing document
+func ExampleFpdf_tutorial30() {
+	fileStr := fmt.Sprintf("%s/pdf/tutorial%02d.pdf", cnGofpdfDir, 29)
+	pdi, err := gofpdf.OpenFile(fileStr)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+	tpl := pdi.ImportPage(1, gofpdf.CropBox, true)
+	_, size := tpl.Size()
+	orientation := size.Orientation()
+	// fmt.Println("Size:", size)
+
+	// Write the output
+	pdf := gofpdf.New("P", "mm", "A4", "")
+	pdf.AddPageFormat(orientation, size)
+	pdf.UseTemplate(tpl)
+
+	pdf.OutputAndClose(docWriter(pdf, 30))
+	// Output:
+	// Successfully generated pdf/tutorial30.pdf
 }
