@@ -77,6 +77,7 @@ func (t *FpdfTpl) Bytes() []byte {
 	return t.bytes
 }
 
+// Templates returns a list of templates used in this template
 func (t *FpdfTpl) Templates() []Template {
 	return t.templates
 }
