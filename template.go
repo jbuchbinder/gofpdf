@@ -62,10 +62,15 @@ func (f *Fpdf) UseTemplateScaled(t Template, corner PointType, size SizeType) {
 		return
 	}
 
-	// make a note of the fact that we actually use this template
+	// make a note of the fact that we actually use this template, as well as any other templates,
+	// images or fonts it uses
 	f.templates[t.ID()] = t
 	for _, tt := range t.Templates() {
 		f.templates[tt.ID()] = tt
+	}
+	for name, ti := range t.Images() {
+		name = sprintf("t%d-%s", t.ID(), name)
+		f.images[name] = ti
 	}
 
 	// template data
@@ -101,6 +106,7 @@ type Template interface {
 	ID() int64
 	Size() (PointType, SizeType)
 	Bytes() []byte
+	Images() map[string]*ImageInfoType
 	Templates() []Template
 }
 
@@ -130,11 +136,14 @@ func (f *Fpdf) putTemplates() {
 		f.out("/Resources ")
 		f.out("<</ProcSet [/PDF /Text /ImageB /ImageC /ImageI]")
 
+		tImages := t.Images()
 		tTemplates := t.Templates()
-		if len(tTemplates) > 0 {
+		if len(tImages) > 0 || len(tTemplates) > 0 {
 			f.out("/XObject <<")
-			var tt Template
-			for _, tt = range tTemplates {
+			for _, ti := range tImages {
+				f.outf("/I%d %d 0 R", ti.i, ti.n)
+			}
+			for _, tt := range tTemplates {
 				id := tt.ID()
 				if objID, ok := f.templateObjects[id]; ok {
 					f.outf("/TPL%d %d 0 R", id, objID)

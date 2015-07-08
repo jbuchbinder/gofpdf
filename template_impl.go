@@ -47,9 +47,10 @@ func newTpl(corner PointType, size SizeType, unitStr, fontDirStr string, fn func
 	for _, t := range tpl.Fpdf.templates {
 		templates = append(templates, t)
 	}
+	images := tpl.Fpdf.images
 
 	id := GenerateTemplateID()
-	template := FpdfTpl{id, corner, size, bytes, templates}
+	template := FpdfTpl{id, corner, size, bytes, images, templates}
 	return &template
 }
 
@@ -59,6 +60,7 @@ type FpdfTpl struct {
 	corner    PointType
 	size      SizeType
 	bytes     []byte
+	images    map[string]*ImageInfoType
 	templates []Template
 }
 
@@ -75,6 +77,11 @@ func (t *FpdfTpl) Size() (corner PointType, size SizeType) {
 // Bytes returns the actual template data, not including resources
 func (t *FpdfTpl) Bytes() []byte {
 	return t.bytes
+}
+
+// Images returns a list of the images used in this template
+func (t *FpdfTpl) Images() map[string]*ImageInfoType {
+	return t.images
 }
 
 // Templates returns a list of templates used in this template
