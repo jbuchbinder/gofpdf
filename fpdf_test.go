@@ -29,7 +29,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/jung-kurt/gofpdf"
+	"github.com/marcusatbang/gofpdf"
 )
 
 // Absolute path needed for gocov tool; relative OK for test
@@ -1683,15 +1683,17 @@ func ExampleFpdf_CreateTemplate() {
 	pdf.Line(60, 210, 80, 210)
 	pdf.Text(40, 200, "Template example page 2")
 
-	pdf.OutputAndClose(docWriter(pdf, 29))
+	fileStr := exampleFilename("template")
+	err := pdf.OutputFileAndClose(fileStr)
+	summary(err, fileStr)
 	// Output:
-	// Successfully generated pdf/tutorial29.pdf
+	// Successfully generated pdf/template.pdf
 }
 
 // This example demonstrates reading a page from an existing document
 func ExampleFpdf_ImportPage() {
-	fileStr := fmt.Sprintf("%s/pdf/tutorial%02d.pdf", cnGofpdfDir, 29)
-	doc, err := gofpdf.OpenFile(fileStr)
+	openFileStr := exampleFilename("addpage")
+	doc, err := gofpdf.OpenFile(openFileStr)
 	if err != nil {
 		fmt.Println(err)
 		return
@@ -1706,7 +1708,9 @@ func ExampleFpdf_ImportPage() {
 	pdf.AddPageFormat(orientation, size)
 	pdf.UseTemplate(tpl)
 
-	pdf.OutputAndClose(docWriter(pdf, 30))
+	fileStr := exampleFilename("import")
+	err = pdf.OutputFileAndClose(fileStr)
+	summary(nil, fileStr)
 	// Output:
-	// Successfully generated pdf/tutorial30.pdf
+	// Successfully generated pdf/import.pdf
 }
