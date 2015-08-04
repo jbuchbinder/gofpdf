@@ -172,6 +172,8 @@ func fpdfNew(orientationStr, unitStr, sizeStr, fontDirStr string, size SizeType)
 	f.blendList = make([]blendModeType, 0, 8)
 	f.blendList = append(f.blendList, blendModeType{}) // blendList[0] is unused (1-based)
 	f.blendMap = make(map[string]int)
+	f.blendMode = "Normal"
+	f.alpha = 1
 	f.gradientList = make([]gradientType, 0, 8)
 	f.gradientList = append(f.gradientList, gradientType{}) // gradientList[0] is unused
 	// Set default PDF version number
@@ -1064,6 +1066,13 @@ func (f *Fpdf) Arc(x, y, rx, ry, degRotate, degStart, degEnd float64, styleStr s
 	f.arc(x, y, rx, ry, degRotate, degStart, degEnd, styleStr, false)
 }
 
+// GetAlpha returns the alpha blending channel, which consists of the
+// alpha transparency value and the blend mode. See SetAlpha for more
+// details.
+func (f *Fpdf) GetAlpha() (alpha float64, blendModeStr string) {
+	return f.alpha, f.blendMode
+}
+
 // SetAlpha sets the alpha blending channel. The blending effect applies to
 // text, drawings and images.
 //
@@ -1078,7 +1087,7 @@ func (f *Fpdf) Arc(x, y, rx, ry, degRotate, degStart, degEnd float64, styleStr s
 // To reset normal rendering after applying a blending mode, call this method
 // with alpha set to 1.0 and blendModeStr set to "Normal".
 func (f *Fpdf) SetAlpha(alpha float64, blendModeStr string) {
-	if f.err != nil {
+	if f.err != nil || (alpha == f.alpha && blendModeStr == f.blendMode) {
 		return
 	}
 	var bl blendModeType
@@ -1097,6 +1106,8 @@ func (f *Fpdf) SetAlpha(alpha float64, blendModeStr string) {
 		f.err = fmt.Errorf("alpha value (0.0 - 1.0) is out of range: %.3f", alpha)
 		return
 	}
+	f.alpha = alpha
+	f.blendMode = blendModeStr
 	alphaStr := sprintf("%.3f", alpha)
 	keyStr := sprintf("%s %s", alphaStr, blendModeStr)
 	pos, ok := f.blendMap[keyStr]
@@ -1378,6 +1389,16 @@ func (f *Fpdf) AddFont(familyStr, styleStr, fileStr string) {
 	f.AddFontFromReader(familyStr, styleStr, file)
 }
 
+// getFontKey is used by AddFontFromReader and GetFontDesc
+func getFontKey(familyStr, styleStr string) string {
+	familyStr = strings.ToLower(familyStr)
+	styleStr = strings.ToUpper(styleStr)
+	if styleStr == "IB" {
+		styleStr = "BI"
+	}
+	return familyStr + styleStr
+}
+
 // AddFontFromReader imports a TrueType, OpenType or Type1 font and makes it
 // available using a reader that satisifies the io.Reader interface. See
 // AddFont for details about familyStr and styleStr.
@@ -1387,12 +1408,7 @@ func (f *Fpdf) AddFontFromReader(familyStr, styleStr string, r io.Reader) {
 	}
 	// dbg("Adding family [%s], style [%s]", familyStr, styleStr)
 	var ok bool
-	familyStr = strings.ToLower(familyStr)
-	styleStr = strings.ToUpper(styleStr)
-	if styleStr == "IB" {
-		styleStr = "BI"
-	}
-	fontkey := familyStr + styleStr
+	fontkey := getFontKey(familyStr, styleStr)
 	_, ok = f.fonts[fontkey]
 	if ok {
 		return
@@ -1429,6 +1445,18 @@ func (f *Fpdf) AddFontFromReader(familyStr, styleStr string, r io.Reader) {
 	}
 	f.fonts[fontkey] = info
 	return
+}
+
+// GetFontDesc returns the font descriptor, which can be used for
+// example to find the baseline of a font. If familyStr is empty
+// current font descriptor will be returned.
+// See FontDescType for documentation about the font descriptor.
+// See AddFont for details about familyStr and styleStr.
+func (f *Fpdf) GetFontDesc(familyStr, styleStr string) FontDescType {
+	if familyStr == "" {
+		return f.currentFont.Desc
+	}
+	return f.fonts[getFontKey(familyStr, styleStr)].Desc
 }
 
 // SetFont sets the font used to print character strings. It is mandatory to
@@ -1530,13 +1558,27 @@ func (f *Fpdf) SetFont(familyStr, styleStr string, size float64) {
 	return
 }
 
-// SetFontSize defines the size of the current font in points.
+// SetFontSize defines the size of the current font. Size is specified in
+// points (1/ 72 inch). See also SetFontUnitSize().
 func (f *Fpdf) SetFontSize(size float64) {
 	if f.fontSizePt == size {
 		return
 	}
 	f.fontSizePt = size
 	f.fontSize = size / f.k
+	if f.page > 0 {
+		f.outf("BT /F%d %.2f Tf ET", f.currentFont.I, f.fontSizePt)
+	}
+}
+
+// SetFontUnitSize defines the size of the current font. Size is specified in
+// the unit of measure specified in New(). See also SetFontSize().
+func (f *Fpdf) SetFontUnitSize(size float64) {
+	if f.fontSize == size {
+		return
+	}
+	f.fontSizePt = size * f.k
+	f.fontSize = size
 	if f.page > 0 {
 		f.outf("BT /F%d %.2f Tf ET", f.currentFont.I, f.fontSizePt)
 	}
@@ -1665,8 +1707,8 @@ func (f *Fpdf) SetAcceptPageBreakFunc(fnc func() bool) {
 // alignStr specifies how the text is to be positionined within the cell.
 // Horizontal alignment is controlled by including "L", "C" or "R" (left,
 // center, right) in alignStr. Vertical alignment is controlled by including
-// "T", "M" or "B" (top, middle, bottom) in alignStr. The default alignment is
-// left middle.
+// "T", "M", "B" or "A" (top, middle, bottom, baseline) in alignStr. The default
+// alignment is left middle.
 //
 // fill is true to paint the cell background or false to leave it transparent.
 //
@@ -1757,6 +1799,16 @@ func (f *Fpdf) CellFormat(w, h float64, txtStr string, borderStr string, ln int,
 			dy = (f.fontSize - h) / 2.0
 		} else if strings.Index(alignStr, "B") != -1 {
 			dy = (h - f.fontSize) / 2.0
+		} else if strings.Index(alignStr, "A") != -1 {
+			var descent float64
+			d := f.currentFont.Desc
+			if d.Descent == 0 {
+				// not defined (standard font?), use average of 19%
+				descent = -0.19 * f.fontSize
+			} else {
+				descent = float64(d.Descent) * f.fontSize / float64(d.Ascent-d.Descent)
+			}
+			dy = (h-f.fontSize)/2.0 - descent
 		} else {
 			dy = 0
 		}
@@ -2849,6 +2901,22 @@ func (f *Fpdf) outbuf(b *bytes.Buffer) {
 		f.buffer.ReadFrom(b)
 		f.buffer.WriteString("\n")
 	}
+}
+
+// RawWriteStr writes a string directly to the PDF generation buffer. This is a
+// low-level function that is not required for normal PDF construction. An
+// understanding of the PDF specification is needed to use this method
+// correctly.
+func (f *Fpdf) RawWriteStr(str string) {
+	f.out(str)
+}
+
+// RawWriteBuf writes the contents of the specified buffer directly to the PDF
+// generation buffer. This is a low-level function that is not required for
+// normal PDF construction. An understanding of the PDF specification is needed
+// to use this method correctly.
+func (f *Fpdf) RawWriteBuf(buf *bytes.Buffer) {
+	f.outbuf(buf)
 }
 
 // Add a formatted line to the document
