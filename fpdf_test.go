@@ -1733,11 +1733,11 @@ func ExampleFpdf_CreateTemplate() {
 	pdf.Line(60, 210, 80, 210)
 	pdf.Text(40, 200, "Template example page 2")
 
-	fileStr := exampleFilename("template")
+	fileStr := exampleFilename("Fpdf_CreateTemplate")
 	err := pdf.OutputFileAndClose(fileStr)
 	summary(err, fileStr)
 	// Output:
-	// Successfully generated pdf/template.pdf
+	// Successfully generated pdf/Fpdf_CreateTemplate.pdf
 }
 
 // This example demonstrates reading a page from an existing document
