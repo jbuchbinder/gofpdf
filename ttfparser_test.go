@@ -19,7 +19,7 @@ package gofpdf_test
 import (
 	"bytes"
 	"fmt"
-	"github.com/marcusatbang/gofpdf"
+	"github.com/jung-kurt/gofpdf"
 	// "testing"
 )
 
