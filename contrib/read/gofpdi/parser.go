@@ -27,7 +27,6 @@ import (
 	// "bufio"
 	"errors"
 	// "github.com/jung-kurt/gofpdf"
-	"log"
 )
 
 const (
@@ -49,6 +48,7 @@ type PDFParser struct {
 						trailer Dictionary
 		 }
 	currentObject ObjectDeclaration
+	root Dictionary
 }
 
 // OpenPDFParser opens an existing PDF file and readies it
@@ -75,11 +75,15 @@ func OpenPDFParser(file *os.File) (*PDFParser, error) {
 		return nil, err
 	}
 
+	err = parser.readRoot()
+	if err != nil {
+		return nil, err
+	}
+
 	// check for encryption
-	/*
 	if parser.getEncryption() {
 		return nil, errors.New("File is encrypted!")
-	}*/
+	}
 
 	return parser, nil
 }
@@ -266,9 +270,34 @@ func (parser *PDFParser) readXrefTable(offset int64) error {
 	// Read trailer into dictionary.
 	trailer := parser.readValue()
 	parser.xref.trailer = trailer.(Dictionary)
-	log.Println(trailer)
 
 	return nil
+}
+
+// readValue reads the next value from the PDF
+func (parser *PDFParser) readRoot() (error) {
+	if rootRef, ok := parser.xref.trailer["/Root"]; ok {
+		if rootRef.Type() != typeObjRef {
+			return errors.New("Wrong Type of Root-Element! Must be an indirect reference")
+		}
+
+		root := parser.resolveObject(rootRef);
+		if root == nil {
+			return errors.New("Could not find reference to root")
+		}
+		parser.root = root
+		return nil
+	} else {
+		return errors.New("Could not find root in trailer")
+	}
+}
+
+// readValue reads the next value from the PDF
+func (parser *PDFParser) getEncryption() bool {
+	if _, ok := parser.xref.trailer["/Encrypt"]; ok {
+		return true
+	}
+	return false
 }
 
 // readValue reads the next value from the PDF
@@ -391,7 +420,7 @@ func (parser *PDFParser) readValue() Value {
 				switch string(moreTokens[1]) {
 				case "obj":
 					parser.reader.ReadTokens(2)
-					return ObjectDeclaration{number, number2, []Value{}}
+					return ObjectRef{number, number2}
 				case "R":
 					parser.reader.ReadTokens(2)
 					return ObjectRef{number, number2}
@@ -429,14 +458,21 @@ func (parser *PDFParser) resolveObject(spec Value) Dictionary {
 
 		// This is a reference, resolve it
 		if offset, ok := parser.xref.xref[objRef]; ok {
+			originalOffset, _ := parser.reader.Seek(0, 1)
 			parser.reader.Seek(offset, 0)
 			header := parser.readValue()
 			if header != objRef {
+
+				// Reset seeker, we want to find our object.
+				parser.reader.Seek(0, 0)
 				toSearchFor := Token(fmt.Sprintf("%d %d obj", objRef.Obj, objRef.Gen))
 				if parser.reader.SkipToToken(toSearchFor) {
 					parser.reader.SkipBytes(len(toSearchFor))
 				} else {
 					// Unable to find object
+
+					// Reset to the original position
+					parser.reader.Seek(originalOffset, 0)
 					return nil
 				}
 			}
@@ -446,6 +482,8 @@ func (parser *PDFParser) resolveObject(spec Value) Dictionary {
 			// number for later use
 			result := ObjectDeclaration{header.(ObjectRef).Obj, header.(ObjectRef).Gen, make([]Value, 0, 2)}
 			parser.currentObject = result
+
+			dict := Dictionary{}
 
 			// Now simply read the object data until
 			// we encounter an end-of-object marker
@@ -460,11 +498,19 @@ func (parser *PDFParser) resolveObject(spec Value) Dictionary {
 					break
 				}
 
-				result.Values = append(result.Values, value)
+				if value.Type() == typeDictionary {
+					dict = value.(Dictionary)
+				}
+
+				if value.Type() != typeToken {
+					result.Values = append(result.Values, value)
+				}
 			}
 
-			// Reset to the start
-			// parser.reader.Seek(???)
+			// Reset to the original position
+			parser.reader.Seek(originalOffset, 0)
+
+			return dict
 
 		} else {
 			// Unable to find object
