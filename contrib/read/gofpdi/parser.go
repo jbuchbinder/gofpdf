@@ -26,8 +26,7 @@ import (
 	"strconv"
 	// "bufio"
 	"errors"
-	// "github.com/jung-kurt/gofpdf"
-	"log"
+	"github.com/jung-kurt/gofpdf"
 	"math"
 )
 
@@ -155,7 +154,7 @@ func (parser *PDFParser) getPageBox(pageObj Dictionary, boxIndex string, k float
 	var box Value
 
 	// Do we have this box in our page?
-	if boxRef, ok := page["/" + boxIndex]; ok {
+	if boxRef, ok := page[boxIndex]; ok {
 
 		// If box is a reference, resolve it.
 		if boxRef.Type() == typeObjRef {
@@ -173,17 +172,16 @@ func (parser *PDFParser) getPageBox(pageObj Dictionary, boxIndex string, k float
 		if box.Type() == typeArray {
 
 			boxDetails := box.(Array)
-			log.Println()
-			x := boxDetails[0] / k
-			y := boxDetails[1] / k
-			w := math.Abs(boxDetails[0] - boxDetails[2]) / k
-			h := math.Abs(boxDetails[1] - boxDetails[3]) / k
-			llx := math.Min(boxDetails[0], boxDetails[2]) / k
-			lly := math.Min(boxDetails[1], boxDetails[3]) / k
-			urx := math.Max(boxDetails[0], boxDetails[2]) / k
-			ury := math.Max(boxDetails[1], boxDetails[3]) / k
+			x := float64(boxDetails[0].(Real)) / k
+			y := float64(boxDetails[1].(Real)) / k
+			w := math.Abs(float64(boxDetails[0].(Real)) - float64(boxDetails[2].(Real))) / k
+			h := math.Abs(float64(boxDetails[1].(Real)) - float64(boxDetails[3].(Real))) / k
+			llx := math.Min(float64(boxDetails[0].(Real)), float64(boxDetails[2].(Real))) / k
+			lly := math.Min(float64(boxDetails[1].(Real)), float64(boxDetails[3].(Real))) / k
+			urx := math.Max(float64(boxDetails[0].(Real)), float64(boxDetails[2].(Real))) / k
+			ury := math.Max(float64(boxDetails[1].(Real)), float64(boxDetails[3].(Real))) / k
 
-			return PageBox{
+			return &PageBox{
 				gofpdf.PointType{
 					x,
 					y,
@@ -548,6 +546,10 @@ func (parser *PDFParser) readValue(token Token) Value {
 					return ObjectRef{number, number2}
 				}
 			}
+		}
+
+		if real, err := strconv.ParseFloat(str, 64); err == nil {
+			return Real(real)
 		}
 
 		return Numeric(number)

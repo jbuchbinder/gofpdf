@@ -23,6 +23,8 @@ import (
 	// "strconv"
 	"os"
 	"github.com/jung-kurt/gofpdf"
+	"log"
+	"strings"
 )
 
 // Fpdi represents a PDF file parser which can load templates to use in other documents
@@ -46,9 +48,7 @@ func Open(file *os.File) (*Fpdi, error) {
 	td.parser = parser
 	td.pdfVersion = td.parser.reader.pdfVersion
 	td.numPages = len(parser.pages)
-
-	// td.k = ???
-	// ???
+	td.k = 72.0 / 25.4
 
 	return td, nil
 }
@@ -69,8 +69,7 @@ func OpenFromFileName(filename string) (*Fpdi, error) {
 	td.pdfVersion = td.parser.reader.pdfVersion
 	td.numPages = len(td.parser.pages)
 
-	// td.k = ???
-	// ???
+	td.k = 72.0 / 25.4
 
 	return td, nil
 }
@@ -90,15 +89,23 @@ func (td *Fpdi) ImportPage(pageNumber int, boxName string, groupXObject bool) go
 	if boxName == "" {
 		boxName = DefaultBox
 	}
+
+	boxName = "/" + strings.TrimLeft(boxName, "/")
+
 	td.parser.setPageNumber(pageNumber)
 
 	t := new(TemplatePage)
 	t.id = gofpdf.GenerateTemplateID()
 
 	pageBoxes := td.parser.GetPageBoxes(pageNumber, td.k)
-	_ /*pageBox*/ = pageBoxes.get(boxName)
+
+	log.Println(pageBoxes)
+
+	pageBox := pageBoxes.get(boxName)
 	td.lastUsedPageBox = pageBoxes.lastUsedPageBox
 
+
+	log.Println(pageBox)
 	return t
 }
 
