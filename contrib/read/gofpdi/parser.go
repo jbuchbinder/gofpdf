@@ -30,7 +30,10 @@ import (
 	"math"
 	"compress/zlib"
 	"compress/lzw"
+	"encoding/ascii85"
 	"io"
+	"regexp"
+	"encoding/hex"
 )
 
 const (
@@ -709,6 +712,8 @@ func (parser *PDFParser) _getPageResources(pageObj Value) (error, []Value) {
 // getContent reads the page resources for a specific page.
 func (parser *PDFParser) getContent() (error, []byte) {
 
+	var returnBytes []byte
+
 	for i, page := range parser.pages {
 		if i == (parser.pageNumber - 1) {
 
@@ -718,10 +723,13 @@ func (parser *PDFParser) getContent() (error, []byte) {
 				var contents [][]Value
 				parser._getPageContent(contentRef, &contents)
 				for _, content := range contents {
-					_ = parser._unFilterStream(content)
+					newBytes := parser._unFilterStream(content)
+					if newBytes != nil {
+						returnBytes = append(returnBytes, newBytes...)
+					}
 				}
 			}
-			return nil, nil
+			return nil, returnBytes
 		}
 	}
 
@@ -785,9 +793,29 @@ func (parser *PDFParser) _unFilterStream(content []Value) []byte {
 
 			return out.Bytes()
 			break
-			case "/ASCII85Decode":
+		case "/ASCII85Decode":
+			var out bytes.Buffer
+			ascii85Reader := ascii85.NewDecoder(stream.GetReader())
+
+			io.Copy(&out, ascii85Reader)
+
+			return out.Bytes()
 			break
 		case "ASCIIHexDecode":
+			hexbytes := []byte(stream)
+			hexstring := string(hexbytes)
+			re := regexp.MustCompile("[^0-9A-Fa-f]")
+			hexstring = re.ReplaceAllString(hexstring, "")
+			hexstring = strings.TrimRight(hexstring, ">")
+			if (len(hexstring) % 2) == 1 {
+				hexstring += "0";
+			}
+
+			out, err := hex.DecodeString(hexstring)
+			if err != nil {
+				return nil
+			}
+			return out
 			break
 
 		}
