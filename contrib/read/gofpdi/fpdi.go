@@ -45,6 +45,7 @@ func Open(file *os.File) (*Fpdi, error) {
 	td := new(Fpdi)
 	td.parser = parser
 	td.pdfVersion = td.parser.reader.pdfVersion
+	td.numPages = len(parser.pages)
 
 	// td.k = ???
 	// ???
@@ -66,6 +67,7 @@ func OpenFromFileName(filename string) (*Fpdi, error) {
 	td := new(Fpdi)
 	td.parser = parser
 	td.pdfVersion = td.parser.reader.pdfVersion
+	td.numPages = len(td.parser.pages)
 
 	// td.k = ???
 	// ???

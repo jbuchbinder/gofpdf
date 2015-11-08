@@ -286,7 +286,7 @@ func splitTokens(data []byte, atEOF bool) (advance int, token []byte, err error)
 		0x5D: // ]
 		// os.Stderr.WriteString("Scanner: string or array\n")
 		// This is either an array or literal string delimiter, return it
-		return 1, []byte{b}, nil
+		return 2, []byte{b}, nil
 
 	case 0x3C, // <
 		0x3E: // >
@@ -295,9 +295,9 @@ func splitTokens(data []byte, atEOF bool) (advance int, token []byte, err error)
 		// determine which it is and return the token
 		b2 := data[offset+1]
 		if b2 == b {
-			return 2, data[offset:offset+2], nil
+			return 3, data[offset:offset+2], nil
 		}
-		return 1, []byte{b}, nil
+		return 2, []byte{b}, nil
 
 	case 0x25: // %
 		// This is a comment - jump over it!

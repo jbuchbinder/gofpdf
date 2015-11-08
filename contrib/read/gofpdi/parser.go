@@ -27,6 +27,8 @@ import (
 	// "bufio"
 	"errors"
 	// "github.com/jung-kurt/gofpdf"
+	"log"
+	"math"
 )
 
 const (
@@ -85,6 +87,16 @@ func OpenPDFParser(file *os.File) (*PDFParser, error) {
 		return nil, errors.New("File is encrypted!")
 	}
 
+	getPagesObj, err := parser.getPagesObj()
+	if err != nil {
+		return nil, err
+	}
+
+	err = parser.readPages(getPagesObj)
+	if err != nil {
+		return nil, err
+	}
+
 	return parser, nil
 }
 
@@ -109,24 +121,24 @@ type PDFPage struct {
 // k is a scaling factor from user space units to points
 func (parser *PDFParser) GetPageBoxes(pageNumber int, k float64) PageBoxes {
 	boxes := make(map[string]*PageBox, 5)
-	if pageNumber >= len(parser.pages) {
+	if pageNumber < 0 || (pageNumber - 1) >= len(parser.pages) {
 		return PageBoxes{boxes, DefaultBox}
 	}
 
-	page := parser.pages[pageNumber]
-	if box := parser.getPageBox(page, MediaBox, k); box != nil {
+	page := parser.pages[pageNumber - 1]
+	if box := parser.getPageBox(page.Dictionary, MediaBox, k); box != nil {
 		boxes[MediaBox] = box
 	}
-	if box := parser.getPageBox(page, CropBox, k); box != nil {
+	if box := parser.getPageBox(page.Dictionary, CropBox, k); box != nil {
 		boxes[CropBox] = box
 	}
-	if box := parser.getPageBox(page, BleedBox, k); box != nil {
+	if box := parser.getPageBox(page.Dictionary, BleedBox, k); box != nil {
 		boxes[BleedBox] = box
 	}
-	if box := parser.getPageBox(page, TrimBox, k); box != nil {
+	if box := parser.getPageBox(page.Dictionary, TrimBox, k); box != nil {
 		boxes[TrimBox] = box
 	}
-	if box := parser.getPageBox(page, ArtBox, k); box != nil {
+	if box := parser.getPageBox(page.Dictionary, ArtBox, k); box != nil {
 		boxes[ArtBox] = box
 	}
 	return PageBoxes{boxes, DefaultBox}
@@ -137,20 +149,68 @@ func (parser *PDFParser) GetPageBoxes(pageNumber int, k float64) PageBoxes {
 // page is a /Page dictionary.
 //
 // k is a scaling factor from user space units to points.
-func (parser *PDFParser) getPageBox(page PDFPage, boxIndex string, k float64) *PageBox {
-	// page = parser.resolveObject(page);
+func (parser *PDFParser) getPageBox(pageObj Dictionary, boxIndex string, k float64) *PageBox {
+	page := pageObj
+
+	var box Value
+
+	// Do we have this box in our page?
+	if boxRef, ok := page["/" + boxIndex]; ok {
+
+		// If box is a reference, resolve it.
+		if boxRef.Type() == typeObjRef {
+			box = parser.resolveObject(boxRef);
+			if box == nil {
+				return nil
+			}
+		}
+		if boxRef.Type() == typeArray {
+			box = boxRef
+		}
+	}
+
+	if box != nil {
+		if box.Type() == typeArray {
+
+			boxDetails := box.(Array)
+			log.Println()
+			x := boxDetails[0] / k
+			y := boxDetails[1] / k
+			w := math.Abs(boxDetails[0] - boxDetails[2]) / k
+			h := math.Abs(boxDetails[1] - boxDetails[3]) / k
+			llx := math.Min(boxDetails[0], boxDetails[2]) / k
+			lly := math.Min(boxDetails[1], boxDetails[3]) / k
+			urx := math.Max(boxDetails[0], boxDetails[2]) / k
+			ury := math.Max(boxDetails[1], boxDetails[3]) / k
+
+			return PageBox{
+				gofpdf.PointType{
+					x,
+					y,
+				},
+				gofpdf.SizeType{
+					w,
+					h,
+				},
+				gofpdf.PointType{
+					llx,
+					lly,
+				},
+				gofpdf.PointType{
+					urx,
+					ury,
+				},
+			}
+		}
+	} else {
+		// Box not found, take it from the parent.
+		if parentPageRef, ok := page["/Parent"]; ok {
+			parentPageObj := parser.resolveObject(parentPageRef)
+			return parser.getPageBox(parentPageObj.Values[0].(Dictionary), boxIndex, k)
+		}
+	}
 
 	/*
-	   $page = $this->resolveObject($page);
-	   $box = null;
-	   if (isset($page[1][1][$boxIndex])) {
-	       $box = $page[1][1][$boxIndex];
-	   }
-
-	   if (!is_null($box) && $box[0] == pdf_parser::TYPE_OBJREF) {
-	       $tmp_box = $this->resolveObject($box);
-	       $box = $tmp_box[1];
-	   }
 
 	   if (!is_null($box) && $box[0] == pdf_parser::TYPE_ARRAY) {
 	       $b = $box[1];
@@ -170,8 +230,6 @@ func (parser *PDFParser) getPageBox(page PDFPage, boxIndex string, k float64) *P
 	       return $this->_getPageBox($this->resolveObject($page[1][1]['/Parent']), $boxIndex, $k);
 	   }
 	*/
-
-	// page = resolveObject(page)
 
 	return nil
 }
@@ -268,13 +326,13 @@ func (parser *PDFParser) readXrefTable(offset int64) error {
 	parser.reader.ReadToken()
 
 	// Read trailer into dictionary.
-	trailer := parser.readValue()
+	trailer := parser.readValue(nil)
 	parser.xref.trailer = trailer.(Dictionary)
 
 	return nil
 }
 
-// readValue reads the next value from the PDF
+// readRoot reads the object reference for the root.
 func (parser *PDFParser) readRoot() (error) {
 	if rootRef, ok := parser.xref.trailer["/Root"]; ok {
 		if rootRef.Type() != typeObjRef {
@@ -285,14 +343,63 @@ func (parser *PDFParser) readRoot() (error) {
 		if root == nil {
 			return errors.New("Could not find reference to root")
 		}
-		parser.root = root
+		parser.root = root.Values[0].(Dictionary)
 		return nil
 	} else {
 		return errors.New("Could not find root in trailer")
 	}
 }
 
-// readValue reads the next value from the PDF
+// getPagesObj gets the pages object from the root element.
+func (parser *PDFParser) getPagesObj() (Dictionary, error) {
+	if pagesRef, ok := parser.root["/Pages"]; ok {
+		if pagesRef.Type() != typeObjRef {
+			return nil, errors.New("Wrong Type of Pages-Element! Must be an indirect reference")
+		}
+
+		pages := parser.resolveObject(pagesRef);
+		if pages == nil {
+			return nil, errors.New("Could not find reference to pages")
+		}
+		return pages.Values[0].(Dictionary), nil
+	} else {
+		return nil, errors.New("Could not find /Pages in /Root-Dictionary")
+	}
+}
+
+// readPages parses the PDF Page Object into PDFPages
+func (parser *PDFParser) readPages(pages Dictionary) (error) {
+	var kids Array
+	if kidsRef, ok := pages["/Kids"]; ok {
+		if kidsRef.Type() != typeArray {
+			return errors.New("Wrong Type of Kids-Element! Must be an array")
+		}
+
+		kids = kidsRef.(Array)
+		if kids == nil {
+			return errors.New("Could not find reference to kids")
+		}
+	} else {
+		return errors.New("Cannot find /Kids in current /Page-Dictionary")
+	}
+
+	for k, val := range kids {
+		pageObj := parser.resolveObject(val);
+		if pageObj == nil {
+			return errors.New(fmt.Sprintf("Could not find reference to page %i", k))
+		}
+
+		page := PDFPage{
+			pageObj.Values[0].(Dictionary),
+			(k + 1),
+		}
+		parser.pages = append(parser.pages, page)
+	}
+
+	return nil
+}
+
+// getEncryption checks if the pdf has encryption.
 func (parser *PDFParser) getEncryption() bool {
 	if _, ok := parser.xref.trailer["/Encrypt"]; ok {
 		return true
@@ -301,10 +408,9 @@ func (parser *PDFParser) getEncryption() bool {
 }
 
 // readValue reads the next value from the PDF
-func (parser *PDFParser) readValue() Value {
-	token := parser.reader.ReadToken()
+func (parser *PDFParser) readValue(token Token) Value {
 	if token == nil {
-		return nil
+		token = parser.reader.ReadToken()
 	}
 
 	str := token.String()
@@ -322,24 +428,34 @@ func (parser *PDFParser) readValue() Value {
 		// the end of the dictionary.
 		result := make(map[string]Value, 32)
 
-		// Skip one token.
-		parser.reader.ReadToken()
+		validToken := true
 
-		for key := parser.reader.ReadToken(); !key.Equals(Token(">>")); key = parser.reader.ReadToken() {
+		// Skip one line for dictionary.
+		for validToken {
+			key := parser.reader.ReadToken()
+			if (key.Equals(Token(">>"))) {
+				validToken = false
+				break;
+			}
+
 			if key == nil {
 				return nil // ?
 			}
-			value := parser.readValue()
+
+			value := parser.readValue(nil)
 			if value == nil {
 				return nil // ?
 			}
+
 			// Catch missing value
-			if value.Equals(Token(">>")) {
-				result[key.String()] = value
+			if value.Type() == typeToken && value.Equals(Token(">>")) {
+				result[key.String()] = Null(struct{}{})
 				break
 			}
+
 			result[key.String()] = value
 		}
+
 		return Dictionary(result)
 
 	case "[":
@@ -348,10 +464,13 @@ func (parser *PDFParser) readValue() Value {
 		// the end of the array.
 		result := make([]Value, 0, 32)
 		for {
-			value := parser.readValue()
-			if value.Equals(Token("]")) {
-				break
+			// We peek here, as the token could be the value.
+			token := parser.reader.ReadToken()
+			if token.Equals(Token("]")) {
+				break;
 			}
+
+			value := parser.readValue(token)
 			result = append(result, value)
 		}
 		return Array(result)
@@ -381,6 +500,7 @@ func (parser *PDFParser) readValue() Value {
 		return String(buf.Bytes())
 
 	case "stream":
+		/*
 		// ensure line breaks in front of the stream
 		peek := parser.reader.Peek(32)
 		for _, c := range peek {
@@ -405,6 +525,8 @@ func (parser *PDFParser) readValue() Value {
 		}
 
 		return Stream(stream)
+		*/
+		return Null(struct{}{})
 	}
 
 	if number, err := strconv.Atoi(str); err == nil {
@@ -448,7 +570,7 @@ func (parser *PDFParser) readValue() Value {
 	return token
 }
 
-func (parser *PDFParser) resolveObject(spec Value) Dictionary {
+func (parser *PDFParser) resolveObject(spec Value) *ObjectDeclaration {
 	// Exit if we get invalid data
 	if spec == nil {
 		return nil
@@ -460,7 +582,9 @@ func (parser *PDFParser) resolveObject(spec Value) Dictionary {
 		if offset, ok := parser.xref.xref[objRef]; ok {
 			originalOffset, _ := parser.reader.Seek(0, 1)
 			parser.reader.Seek(offset, 0)
-			header := parser.readValue()
+			header := parser.readValue(nil)
+
+			// Check to see if we got the correct object.
 			if header != objRef {
 
 				// Reset seeker, we want to find our object.
@@ -483,34 +607,28 @@ func (parser *PDFParser) resolveObject(spec Value) Dictionary {
 			result := ObjectDeclaration{header.(ObjectRef).Obj, header.(ObjectRef).Gen, make([]Value, 0, 2)}
 			parser.currentObject = result
 
-			dict := Dictionary{}
-
 			// Now simply read the object data until
 			// we encounter an end-of-object marker
 			for {
-				value := parser.readValue()
+				value := parser.readValue(nil)
 				if value == nil || len(result.Values) > 1 { // ???
 					// in this case the parser couldn't find an "endobj" so we break here
 					break
 				}
 
-				if value.Equals(Token("endobj")) {
+				if value.Type() == typeToken && value.Equals(Token("endobj")) {
 					break
 				}
 
-				if value.Type() == typeDictionary {
-					dict = value.(Dictionary)
-				}
-
-				if value.Type() != typeToken {
-					result.Values = append(result.Values, value)
-				}
+				result.Values = append(result.Values, value)
 			}
 
 			// Reset to the original position
 			parser.reader.Seek(originalOffset, 0)
 
-			return dict
+			//log.Print(result)
+
+			return &result
 
 		} else {
 			// Unable to find object
@@ -518,7 +636,7 @@ func (parser *PDFParser) resolveObject(spec Value) Dictionary {
 		}
 	}
 
-	if obj, ok := spec.(Dictionary); ok {
+	if obj, ok := spec.(*ObjectDeclaration); ok {
 		return obj
 	}
 	// Er, it's a what now?
