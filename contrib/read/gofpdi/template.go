@@ -48,7 +48,7 @@ func (t *TemplatePage) Size() (gofpdf.PointType, gofpdf.SizeType) {
 
 // Bytes returns the actual template data, not including resources
 func (t *TemplatePage) Bytes() []byte {
-	return nil
+	return t.buffer
 }
 
 // Images returns a list of the images used by this template
