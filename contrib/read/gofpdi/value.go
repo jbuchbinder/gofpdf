@@ -3,7 +3,6 @@ package gofpdi
 import (
 	"bytes"
 	"regexp"
-	"log"
 )
 
 // ValueType is an enum of the given types
@@ -107,7 +106,6 @@ func (s Stream) Equals(v Value) bool {
 
 // Equals checks if the value is an equivalent stream
 func (s Stream) GetReader() *bytes.Reader {
-	log.Println([]byte(s))
 	bytesReader := bytes.NewReader([]byte(s))
 	return bytesReader
 }

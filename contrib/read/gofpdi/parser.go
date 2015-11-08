@@ -28,9 +28,9 @@ import (
 	"errors"
 	"github.com/jung-kurt/gofpdf"
 	"math"
-	"log"
-	_ "compress/zlib"
-	_ "io"
+	"compress/zlib"
+	"compress/lzw"
+	"io"
 )
 
 const (
@@ -488,7 +488,6 @@ func (parser *PDFParser) readValue(token Token) Value {
 	case "stream":
 		// ensure line breaks in front of the stream
 		peek := parser.reader.Peek(32)
-		log.Println(peek)
 		for _, c := range peek {
 			if !isPdfWhitespace(c) {
 				break
@@ -508,8 +507,6 @@ func (parser *PDFParser) readValue(token Token) Value {
 			// We don't throw an error here because the next
 			// round trip will start at a new offset
 		}
-
-		log.Println(stream)
 
 		return Stream(stream)
 	}
@@ -765,27 +762,30 @@ func (parser *PDFParser) _unFilterStream(content []Value) []byte {
 		}
 	}
 
-	//stream := content[1].(Stream)
+	stream := content[1].(Stream)
 
 	for _, filter := range useFilters {
 		switch (filter) {
 		case "/Fl":
 		case "/FlateDecode":
+			var out bytes.Buffer
+			zlibReader, _ := zlib.NewReader(stream.GetReader())
+			defer zlibReader.Close()
 
-			//bytes := []byte(stream)
-			//log.Println(content[1].Type())
-			//log.Println(stream)
+			io.Copy(&out, zlibReader)
 
-			//var out bytes.Buffer
-			//zlibReader, _ := zlib.NewReader(stream.GetReader())
-			//io.Copy(&out, zlibReader)
-
-			//log.Println(out.Bytes())
-
+			return out.Bytes()
 			break
 		case "/LZWDecode":
+			var out bytes.Buffer
+			lzwReader := lzw.NewReader(stream.GetReader(), lzw.MSB, 8)
+			defer lzwReader.Close()
+
+			io.Copy(&out, lzwReader)
+
+			return out.Bytes()
 			break
-		case "/ASCII85Decode":
+			case "/ASCII85Decode":
 			break
 		case "ASCIIHexDecode":
 			break

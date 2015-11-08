@@ -142,7 +142,7 @@ func splitPeek(n int, into *[]byte) func([]byte, bool) (advance int, token []byt
 		// make sure we have enough loaded
 		if len(data) < n && !atEOF {
 			// request more data
-			return 0, nil, nil
+			return 0, nil, io.EOF
 		}
 
 		// return as much as we can
@@ -152,6 +152,8 @@ func splitPeek(n int, into *[]byte) func([]byte, bool) (advance int, token []byt
 		result := make([]byte, n)
 		copy(result, data)
 		*into = result
+
+		// @todo: why do we return io.EOF here?
 		return 0, nil, io.EOF
 	}
 }
@@ -166,14 +168,15 @@ func splitNext(n int) func([]byte, bool) (advance int, token []byte, err error) 
 		// make sure we have enough loaded
 		if len(data) < n && !atEOF {
 			// request more data
-			return 0, nil, nil
+			return 0, nil, io.EOF
 		}
 
 		// return as much as we can
 		if n > len(data) {
 			n = len(data)
 		}
-		return n, data[0:n], io.EOF
+
+		return n, data[0:n], nil
 	}
 }
 
@@ -511,10 +514,12 @@ func (reader *PDFTokenReader) ReadBytes(n int) ([]byte, bool) {
 	reader.splitNext(n)
 
 	buf := bytes.NewBuffer([]byte{})
+
 	for reader.scanner.Scan() {
 		buf.Write(reader.scanner.Bytes())
 	}
-	return buf.Bytes(), reader.scanner.Err() != nil
+
+	return buf.Bytes(), reader.scanner.Err() == nil
 }
 
 // findXrefTable is a special function to read the offset of the xref table from somewhere near the end of the PDF file
