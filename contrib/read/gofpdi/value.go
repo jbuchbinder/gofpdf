@@ -235,5 +235,5 @@ func (r ObjectDeclaration) Type() ValueType {
 // Equals checks if the value is also null
 func (r ObjectDeclaration) Equals(v Value) bool {
 	r2, ok := v.(ObjectDeclaration)
-	return ok && r == r2 // r.obj == r2.obj && r.gen == r2.gen
+	return ok && r.Equals(r2) // r.obj == r2.obj && r.gen == r2.gen
 }

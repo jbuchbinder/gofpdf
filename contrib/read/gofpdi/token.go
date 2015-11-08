@@ -44,12 +44,7 @@ type PDFTokenReader struct {
 }
 
 // NewTokenReader constructs a low level reader for a PDF file
-func NewTokenReader(filename string) (*PDFTokenReader, error) {
-	file, err := os.Open(filename)
-	if err != nil {
-		return nil, err
-	}
-
+func NewTokenReader(file *os.File) (*PDFTokenReader, error) {
 	reader := new(PDFTokenReader)
 	reader.file = file
 	reader.calibrateLineEndings()
@@ -300,7 +295,7 @@ func splitTokens(data []byte, atEOF bool) (advance int, token []byte, err error)
 		// determine which it is and return the token
 		b2 := data[offset+1]
 		if b2 == b {
-			return 2, data[offset:2], nil
+			return 2, data[offset:offset+2], nil
 		}
 		return 1, []byte{b}, nil
 
@@ -504,12 +499,11 @@ func (reader *PDFTokenReader) ReadLinesToToken(token Token) ([][]byte, bool) {
 // If the token cannot be found, returns nil
 func (reader *PDFTokenReader) ReadBytesToToken(token Token) ([]byte, bool) {
 	reader.splitUntil(token)
-
 	buf := bytes.NewBuffer([]byte{})
 	for reader.scanner.Scan() {
 		buf.Write(reader.scanner.Bytes())
 	}
-	return buf.Bytes(), reader.scanner.Err() != nil
+	return buf.Bytes(), reader.scanner.Err() == nil
 }
 
 // ReadBytes reads up to a fixed number of bytes

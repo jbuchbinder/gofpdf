@@ -19,7 +19,7 @@ package gofpdi
 
 import (
 	"fmt"
-	// "os"
+	"os"
 	"strings"
 	// "regexp"
 	"bytes"
@@ -27,16 +27,34 @@ import (
 	// "bufio"
 	"errors"
 	// "github.com/jung-kurt/gofpdf"
+	"log"
 )
 
 const (
 	defaultPdfVersion = "1.3"
 )
 
+// PDFParser is a high-level parser for PDF elements
+// See fpdf_pdf_parser.php
+type PDFParser struct {
+	reader          *PDFTokenReader // the underlying token reader
+	pageNumber      int             // the current page number
+	lastUsedPageBox string          // the most recently used page box
+	pages           []PDFPage       // already loaded pages
+
+	xref struct {
+						maxObject    int                 // the highest xref object number
+						xrefLocation int64               // the location of the xref table
+						xref         map[ObjectRef]int64 // all the xref offsets
+						trailer Dictionary
+		 }
+	currentObject ObjectDeclaration
+}
+
 // OpenPDFParser opens an existing PDF file and readies it
-func OpenPDFParser(filename string) (*PDFParser, error) {
+func OpenPDFParser(file *os.File) (*PDFParser, error) {
 	// fmt.Println("Opening PDF file:", filename)
-	reader, err := NewTokenReader(filename)
+	reader, err := NewTokenReader(file)
 	if err != nil {
 		return nil, err
 	}
@@ -51,35 +69,19 @@ func OpenPDFParser(filename string) (*PDFParser, error) {
 	if err != nil {
 		return nil, err
 	}
+
 	err = parser.readXrefTable(offset)
 	if err != nil {
 		return nil, err
 	}
 
 	// check for encryption
-	// parser.checkEncryption()
-
-	// read root
-	// pagesDictionary := parser.resolveObject("/Pages")
+	/*
+	if parser.getEncryption() {
+		return nil, errors.New("File is encrypted!")
+	}*/
 
 	return parser, nil
-}
-
-// PDFParser is a high-level parser for PDF elements
-// See fpdf_pdf_parser.php
-type PDFParser struct {
-	reader          *PDFTokenReader // the underlying token reader
-	pageNumber      int             // the current page number
-	lastUsedPageBox string          // the most recently used page box
-	pages           []PDFPage       // already loaded pages
-
-	xref struct {
-		maxObject    int                 // the highest xref object number
-		xrefLocation int64               // the location of the xref table
-		xref         map[ObjectRef]int64 // all the xref offsets
-	}
-
-	currentObject Dictionary
 }
 
 func (parser *PDFParser) setPageNumber(pageNumber int) {
@@ -189,26 +191,16 @@ func (parser *PDFParser) checkXrefTableOffset(offset int64) (int64, error) {
 }
 
 func (parser *PDFParser) readXrefTable(offset int64) error {
-	// fmt.Println("Reading xref table at", offset)
-
-	// offset, err := parser.reader.checkXrefTable(offset)
-	// if err != nil {
-	// 	return err
-	// }
 
 	// first read in the Xref table data and the trailer dictionary
 	if _, err := parser.reader.Seek(offset, 0); err != nil {
 		return err
 	}
+
 	lines, ok := parser.reader.ReadLinesToToken(Token("trailer"))
 	if !ok {
 		return errors.New("Cannot read end of xref table")
 	}
-
-	// trailer, ok := parser.readValue().(Dictionary)
-	// if !ok {
-	// 	return errors.New("Not a dictionary")
-	// }
 
 	// read the lines, store the xref table data
 	start := 1
@@ -257,12 +249,24 @@ func (parser *PDFParser) readXrefTable(offset int64) error {
 		}
 	}
 
-	// process the trailer
-	// if parser.xref.trailer == nil {
-	// 	parser.xref.trailer = trailer
-	// }
+	// first read in the Xref table data and the trailer dictionary
+	if _, err := parser.reader.Seek(offset, 0); err != nil {
+		return err
+	}
 
-	// fmt.Println("Xref table:", fmt.Sprintf("%v", parser.xref))
+	// Find the trailer token.
+	ok = parser.reader.SkipToToken(Token("trailer"))
+	if !ok {
+		return errors.New("Cannot skip to trailer")
+	}
+
+	// Start reading of trailer token.
+	parser.reader.ReadToken()
+
+	// Read trailer into dictionary.
+	trailer := parser.readValue()
+	parser.xref.trailer = trailer.(Dictionary)
+	log.Println(trailer)
 
 	return nil
 }
@@ -280,7 +284,7 @@ func (parser *PDFParser) readValue() Value {
 		// This is a hex value
 		// Read the value, then the terminator
 		bytes, _ := parser.reader.ReadBytesToToken(Token(">"))
-		fmt.Println("Read hex:", bytes)
+		//fmt.Println("Read hex:", bytes)
 		return Hex(bytes)
 
 	case "<<":
@@ -288,6 +292,10 @@ func (parser *PDFParser) readValue() Value {
 		// Recurse into this function until we reach
 		// the end of the dictionary.
 		result := make(map[string]Value, 32)
+
+		// Skip one token.
+		parser.reader.ReadToken()
+
 		for key := parser.reader.ReadToken(); !key.Equals(Token(">>")); key = parser.reader.ReadToken() {
 			if key == nil {
 				return nil // ?
@@ -370,14 +378,11 @@ func (parser *PDFParser) readValue() Value {
 		return Stream(stream)
 	}
 
-	if real, err := strconv.ParseFloat(str, 64); err != nil {
-		return Real(real)
-	}
-	if number, err := strconv.Atoi(str); err != nil {
+	if number, err := strconv.Atoi(str); err == nil {
 		// A numeric token. Make sure that
 		// it is not part of something else.
 		if moreTokens := parser.reader.PeekTokens(2); len(moreTokens) == 2 {
-			if number2, err := strconv.Atoi(string(moreTokens[0])); err != nil {
+			if number2, err := strconv.Atoi(string(moreTokens[0])); err == nil {
 				// Two numeric tokens in a row.
 				// In this case, we're probably in
 				// front of either an object reference
@@ -386,7 +391,7 @@ func (parser *PDFParser) readValue() Value {
 				switch string(moreTokens[1]) {
 				case "obj":
 					parser.reader.ReadTokens(2)
-					return ObjectDeclaration{number, number2}
+					return ObjectDeclaration{number, number2, []Value{}}
 				case "R":
 					parser.reader.ReadTokens(2)
 					return ObjectRef{number, number2}
@@ -396,6 +401,11 @@ func (parser *PDFParser) readValue() Value {
 
 		return Numeric(number)
 	}
+
+	if real, err := strconv.ParseFloat(str, 64); err == nil {
+		return Real(real)
+	}
+
 	if str == "true" {
 		return Boolean(true)
 	}
@@ -416,6 +426,7 @@ func (parser *PDFParser) resolveObject(spec Value) Dictionary {
 	}
 
 	if objRef, ok := spec.(ObjectRef); ok {
+
 		// This is a reference, resolve it
 		if offset, ok := parser.xref.xref[objRef]; ok {
 			parser.reader.Seek(offset, 0)
@@ -433,7 +444,7 @@ func (parser *PDFParser) resolveObject(spec Value) Dictionary {
 			// If we're being asked to store all the information
 			// about the object, we add the object ID and generation
 			// number for later use
-			result := ObjectDeclaration{header.Obj, header.Gen, make([]Value, 0, 2)}
+			result := ObjectDeclaration{header.(ObjectRef).Obj, header.(ObjectRef).Gen, make([]Value, 0, 2)}
 			parser.currentObject = result
 
 			// Now simply read the object data until

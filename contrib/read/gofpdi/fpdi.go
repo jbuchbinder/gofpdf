@@ -21,12 +21,23 @@ import (
 	// "fmt"
 	// "math"
 	// "strconv"
+	"os"
 	"github.com/jung-kurt/gofpdf"
 )
 
+// Fpdi represents a PDF file parser which can load templates to use in other documents
+type Fpdi struct {
+	numPages        int        // the number of pages in the PDF cocument
+	lastUsedPageBox string     // the most recently used value of boxNames
+	parser          *PDFParser // the actual document reader
+	pdfVersion      string     // the PDF version
+	k               float64    // default scale factor (number of points in user unit)
+}
+
+
 // Open makes an existing PDF file usable for templates
-func Open(filename string) (*Fpdi, error) {
-	parser, err := OpenPDFParser(filename)
+func Open(file *os.File) (*Fpdi, error) {
+	parser, err := OpenPDFParser(file)
 	if err != nil {
 		return nil, err
 	}
@@ -41,13 +52,25 @@ func Open(filename string) (*Fpdi, error) {
 	return td, nil
 }
 
-// Fpdi represents a PDF file parser which can load templates to use in other documents
-type Fpdi struct {
-	numPages        int        // the number of pages in the PDF cocument
-	lastUsedPageBox string     // the most recently used value of boxName
-	parser          *PDFParser // the actual document reader
-	pdfVersion      string     // the PDF version
-	k               float64    // default scale factor (number of points in user unit)
+// Open makes an existing PDF file usable for templates
+func OpenFromFileName(filename string) (*Fpdi, error) {
+	file, err := os.Open(filename)
+	if err != nil {
+		return nil, err
+	}
+	parser, err := OpenPDFParser(file)
+	if err != nil {
+		return nil, err
+	}
+
+	td := new(Fpdi)
+	td.parser = parser
+	td.pdfVersion = td.parser.reader.pdfVersion
+
+	// td.k = ???
+	// ???
+
+	return td, nil
 }
 
 // CountPages returns the number of pages in this source document
