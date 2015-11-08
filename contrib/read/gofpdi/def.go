@@ -52,7 +52,7 @@ func (boxes PageBoxes) get(boxName string) *PageBox {
 	 * ArtBox: Default -> CropBox
 	 */
 	if pageBox, ok := boxes.pageBoxes[boxName]; ok {
-		boxes.lastUsedPageBox = boxName
+		boxes.lastUsedPageBox = "/" + boxName
 		return pageBox
 	}
 	switch boxName {

@@ -3,6 +3,7 @@ package gofpdi
 import (
 	"bytes"
 	"regexp"
+	"log"
 )
 
 // ValueType is an enum of the given types
@@ -102,6 +103,13 @@ func (s Stream) Type() ValueType {
 func (s Stream) Equals(v Value) bool {
 	s2, ok := v.(Stream)
 	return ok && bytes.Equal(s, s2)
+}
+
+// Equals checks if the value is an equivalent stream
+func (s Stream) GetReader() *bytes.Reader {
+	log.Println([]byte(s))
+	bytesReader := bytes.NewReader([]byte(s))
+	return bytesReader
 }
 
 // Hex is a hex value
@@ -235,5 +243,24 @@ func (r ObjectDeclaration) Type() ValueType {
 // Equals checks if the value is also null
 func (r ObjectDeclaration) Equals(v Value) bool {
 	r2, ok := v.(ObjectDeclaration)
+	return ok && r.Equals(r2) // r.obj == r2.obj && r.gen == r2.gen
+}
+
+
+// Object is a object
+type Object struct {
+	Obj    int
+	Gen    int
+	Value  Value
+}
+
+// Type of a ObjectRef value
+func (r Object) Type() ValueType {
+	return typeObject
+}
+
+// Equals checks if the value is also null
+func (r Object) Equals(v Value) bool {
+	r2, ok := v.(Object)
 	return ok && r.Equals(r2) // r.obj == r2.obj && r.gen == r2.gen
 }

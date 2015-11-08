@@ -28,6 +28,9 @@ import (
 	"errors"
 	"github.com/jung-kurt/gofpdf"
 	"math"
+	"log"
+	_ "compress/zlib"
+	_ "io"
 )
 
 const (
@@ -49,6 +52,7 @@ type PDFParser struct {
 						trailer Dictionary
 		 }
 	currentObject ObjectDeclaration
+	currentDictionary Dictionary
 	root Dictionary
 }
 
@@ -208,27 +212,6 @@ func (parser *PDFParser) getPageBox(pageObj Dictionary, boxIndex string, k float
 		}
 	}
 
-	/*
-
-	   if (!is_null($box) && $box[0] == pdf_parser::TYPE_ARRAY) {
-	       $b = $box[1];
-	       return array(
-	           'x' => $b[0][1] / $k,
-	           'y' => $b[1][1] / $k,
-	           'w' => abs($b[0][1] - $b[2][1]) / $k,
-	           'h' => abs($b[1][1] - $b[3][1]) / $k,
-	           'llx' => min($b[0][1], $b[2][1]) / $k,
-	           'lly' => min($b[1][1], $b[3][1]) / $k,
-	           'urx' => max($b[0][1], $b[2][1]) / $k,
-	           'ury' => max($b[1][1], $b[3][1]) / $k,
-	       );
-	   } else if (!isset($page[1][1]['/Parent'])) {
-	       return false;
-	   } else {
-	       return $this->_getPageBox($this->resolveObject($page[1][1]['/Parent']), $boxIndex, $k);
-	   }
-	*/
-
 	return nil
 }
 
@@ -384,7 +367,7 @@ func (parser *PDFParser) readPages(pages Dictionary) (error) {
 	for k, val := range kids {
 		pageObj := parser.resolveObject(val);
 		if pageObj == nil {
-			return errors.New(fmt.Sprintf("Could not find reference to page %i", k))
+			return errors.New(fmt.Sprintf("Could not find reference to page %i", (k + 1)))
 		}
 
 		page := PDFPage{
@@ -452,6 +435,11 @@ func (parser *PDFParser) readValue(token Token) Value {
 			}
 
 			result[key.String()] = value
+
+			// This is needed to get the length of stream.
+			// @todo: is there a better way? We can't use currentObject as
+			// @todo the values haven't been added to the currentObject yet.
+			parser.currentDictionary = Dictionary(result)
 		}
 
 		return Dictionary(result)
@@ -498,9 +486,9 @@ func (parser *PDFParser) readValue(token Token) Value {
 		return String(buf.Bytes())
 
 	case "stream":
-		/*
 		// ensure line breaks in front of the stream
 		peek := parser.reader.Peek(32)
+		log.Println(peek)
 		for _, c := range peek {
 			if !isPdfWhitespace(c) {
 				break
@@ -508,13 +496,12 @@ func (parser *PDFParser) readValue(token Token) Value {
 			parser.reader.ReadByte()
 		}
 
-		// TODO get the stream length
-		// lengthObj := parser.currentObject["/Length"]
-		// if lengthObj.Type() == typeObjRef {
-		// 	lengthObj = lengthObj.(ObjectRef).Resolve()
-		// }
-		length := 0
+		lengthObj := parser.currentDictionary["/Length"]
+		if lengthObj.Type() == typeObjRef {
+			lengthObj = parser.resolveObject(lengthObj)
+		}
 
+		length := int(lengthObj.(Real))
 		stream, _ := parser.reader.ReadBytes(length)
 
 		if endstream := parser.reader.ReadToken(); endstream.Equals(Token("endstream")) {
@@ -522,9 +509,9 @@ func (parser *PDFParser) readValue(token Token) Value {
 			// round trip will start at a new offset
 		}
 
+		log.Println(stream)
+
 		return Stream(stream)
-		*/
-		return Null(struct{}{})
 	}
 
 	if number, err := strconv.Atoi(str); err == nil {
@@ -628,8 +615,6 @@ func (parser *PDFParser) resolveObject(spec Value) *ObjectDeclaration {
 			// Reset to the original position
 			parser.reader.Seek(originalOffset, 0)
 
-			//log.Print(result)
-
 			return &result
 
 		} else {
@@ -642,5 +627,171 @@ func (parser *PDFParser) resolveObject(spec Value) *ObjectDeclaration {
 		return obj
 	}
 	// Er, it's a what now?
+	return nil
+}
+
+// getPageRotation reads the page rotation for a specific page.
+func (parser *PDFParser) getPageRotation() (error, Value) {
+
+	for i, page := range parser.pages {
+		if i == (parser.pageNumber - 1) {
+			return parser._getPageRotation(page.Dictionary)
+
+		}
+	}
+
+	return errors.New(fmt.Sprintf("Page %s does not exists.", parser.pageNumber - 1)), nil
+}
+
+// _getPageRotation reads the page rotation for a specific page.
+func (parser *PDFParser) _getPageRotation(pageObj Value) (error, Value) {
+	page := pageObj.(Dictionary)
+
+	if rotation, ok := page["/Rotate"]; ok {
+		if rotation.Type() == typeObject {
+			return nil, rotation.(Object).Value
+		}
+		return nil, rotation
+	}
+
+	if parentObj, ok := page["/Parent"]; ok {
+		parent := parser.resolveObject(parentObj)
+		err, parentRotation := parser._getPageRotation(parent.Values[0])
+		if err != nil {
+			return err, nil
+		}
+
+		if parentRotation == nil {
+			return nil, nil
+		}
+
+		if parentRotation.Type() == typeObject {
+			return nil, parentRotation.(Object).Value
+		}
+		return nil, parentRotation
+	}
+	return nil, nil
+}
+
+// getPageResources reads the page resources for a specific page.
+func (parser *PDFParser) getPageResources() (error, []Value) {
+
+	for i, page := range parser.pages {
+		if i == (parser.pageNumber - 1) {
+			return parser._getPageResources(page.Dictionary)
+
+		}
+	}
+
+	return errors.New(fmt.Sprintf("Page %s does not exists.", parser.pageNumber - 1)), nil
+}
+
+// _getPageResources reads the page resources for a specific page.
+func (parser *PDFParser) _getPageResources(pageObj Value) (error, []Value) {
+	page := pageObj.(Dictionary)
+
+	if resources, ok := page["/Resources"]; ok {
+		resources := parser.resolveObject(resources)
+		return nil, resources.Values
+	}
+
+	if parentObj, ok := page["/Parent"]; ok {
+		parent := parser.resolveObject(parentObj)
+		err, parentResources := parser._getPageResources(parent.Values[0])
+		if err != nil {
+			return err, nil
+		}
+		if parentResources == nil {
+			return nil, nil
+		}
+		return nil, parentResources
+	}
+	return nil, nil
+}
+
+// getContent reads the page resources for a specific page.
+func (parser *PDFParser) getContent() (error, []byte) {
+
+	for i, page := range parser.pages {
+		if i == (parser.pageNumber - 1) {
+
+			pageDitct := page.Dictionary
+
+			if contentRef, ok := pageDitct["/Contents"]; ok {
+				var contents [][]Value
+				parser._getPageContent(contentRef, &contents)
+				for _, content := range contents {
+					_ = parser._unFilterStream(content)
+				}
+			}
+			return nil, nil
+		}
+	}
+
+	return errors.New(fmt.Sprintf("Page %s does not exists.", parser.pageNumber - 1)), nil
+}
+
+// _getPageContent reads the page resources for a specific page.
+func (parser *PDFParser) _getPageContent(contentRef Value, resultContent *[][]Value) {
+	if contentRef.Type() == typeObjRef {
+		content := parser.resolveObject(contentRef)
+		if content.Values[0].Type() == typeArray {
+			parser._getPageContent(content.Values[0], resultContent)
+		} else {
+			*resultContent = append(*resultContent, content.Values)
+		}
+	} else if contentRef.Type() == typeArray {
+		for _, pageContent := range contentRef.(Array) {
+			parser._getPageContent(pageContent, resultContent)
+		}
+	}
+}
+
+func (parser *PDFParser) _unFilterStream(content []Value) []byte {
+	var useFilters []string
+
+	if filter, ok := content[0].(Dictionary)["/Filter"]; ok {
+		if filter.Type() == typeObjRef {
+			tmpFilter := parser.resolveObject(filter)
+			filter = tmpFilter.Values[0]
+		}
+
+		if filter.Type() == typeToken {
+			useFilters = append(useFilters, filter.(Token).String())
+		} else if filter.Type() == typeArray {
+			for _, tmpFilter := range filter.(Array) {
+				useFilters = append(useFilters, tmpFilter.(Token).String())
+			}
+		}
+	}
+
+	//stream := content[1].(Stream)
+
+	for _, filter := range useFilters {
+		switch (filter) {
+		case "/Fl":
+		case "/FlateDecode":
+
+			//bytes := []byte(stream)
+			//log.Println(content[1].Type())
+			//log.Println(stream)
+
+			//var out bytes.Buffer
+			//zlibReader, _ := zlib.NewReader(stream.GetReader())
+			//io.Copy(&out, zlibReader)
+
+			//log.Println(out.Bytes())
+
+			break
+		case "/LZWDecode":
+			break
+		case "/ASCII85Decode":
+			break
+		case "ASCIIHexDecode":
+			break
+
+		}
+	}
+
 	return nil
 }

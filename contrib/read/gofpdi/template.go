@@ -23,9 +23,17 @@ import (
 
 // TemplatePage is a page template, read from an existing page, that can be used in other documents.
 type TemplatePage struct {
-	id       int64           // a unique template ID
-	pageSize gofpdf.SizeType // the size of the page
-	k        float64         // scale factor (number of points in user unit)
+	id            int64           // a unique template ID
+	pageSize      gofpdf.SizeType // the size of the page
+	k             float64         // scale factor (number of points in user unit)
+	parser 	      *PDFParser
+	resources     []Value
+	buffer        []byte
+	box           *PageBox
+	groupXObject  bool
+	x             int64
+	y             int64
+	rotationAngle int
 }
 
 // ID returns the global template identifier

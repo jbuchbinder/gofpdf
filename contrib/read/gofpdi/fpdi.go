@@ -23,8 +23,9 @@ import (
 	// "strconv"
 	"os"
 	"github.com/jung-kurt/gofpdf"
-	"log"
 	"strings"
+	"strconv"
+	"math"
 )
 
 // Fpdi represents a PDF file parser which can load templates to use in other documents
@@ -99,13 +100,34 @@ func (td *Fpdi) ImportPage(pageNumber int, boxName string, groupXObject bool) go
 
 	pageBoxes := td.parser.GetPageBoxes(pageNumber, td.k)
 
-	log.Println(pageBoxes)
-
 	pageBox := pageBoxes.get(boxName)
 	td.lastUsedPageBox = pageBoxes.lastUsedPageBox
 
+	t.box = pageBox
+	t.parser = td.parser
 
-	log.Println(pageBox)
+	err, resources := td.parser.getPageResources()
+
+	if err == nil && resources != nil {
+		t.resources = resources
+	}
+	err, content := td.parser.getContent()
+	if err == nil && content != nil {
+		t.buffer = content
+	}
+	t.groupXObject = groupXObject
+	t.x = 0
+	t.y = 0
+
+	// groupXObject only works => 1.4
+	if (t.groupXObject) {
+		i, _ := strconv.ParseFloat(td.pdfVersion, 64)
+		i2 := 1.4
+		td.pdfVersion = strconv.FormatFloat(math.Max(i, i2), 'f', 12, 64)
+	}
+
+	err, _ = td.parser.getPageRotation()
+
 	return t
 }
 
