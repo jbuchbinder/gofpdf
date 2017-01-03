@@ -4,7 +4,7 @@ import (
 	// "fmt"
 	// "math"
 	// "strconv"
-	"github.com/jung-kurt/gofpdf"
+	"github.com/jbuchbinder/gofpdf"
 )
 
 const (

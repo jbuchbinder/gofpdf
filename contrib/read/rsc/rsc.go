@@ -1,7 +1,7 @@
 package rsc
 
 import (
-	"github.com/jung-kurt/gofpdf"
+	"github.com/jbuchbinder/gofpdf"
 	rsc "rsc.io/pdf"
 )
 

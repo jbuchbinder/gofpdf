@@ -18,7 +18,7 @@ package gofpdi
  */
 
 import (
-	"github.com/jung-kurt/gofpdf"
+	"github.com/jbuchbinder/gofpdf"
 )
 
 // TemplatePage is a page template, read from an existing page, that can be used in other documents.

@@ -26,7 +26,7 @@ import (
 	"strconv"
 	// "bufio"
 	"errors"
-	"github.com/jung-kurt/gofpdf"
+	"github.com/jbuchbinder/gofpdf"
 	"math"
 	"compress/zlib"
 	"compress/lzw"
@@ -635,7 +635,7 @@ func (parser *PDFParser) getPageRotation() (error, Value) {
 
 	for i, page := range parser.pages {
 		if i == (parser.pageNumber - 1) {
-			return parser._getPageRotation(page.Dictionary)
+			return parser.getPageRotation(page.Dictionary)
 
 		}
 	}
@@ -643,8 +643,8 @@ func (parser *PDFParser) getPageRotation() (error, Value) {
 	return errors.New(fmt.Sprintf("Page %s does not exists.", parser.pageNumber - 1)), nil
 }
 
-// _getPageRotation reads the page rotation for a specific page.
-func (parser *PDFParser) _getPageRotation(pageObj Value) (error, Value) {
+// getPageRotation reads the page rotation for a specific page.
+func (parser *PDFParser) getPageRotation(pageObj Value) (error, Value) {
 	page := pageObj.(Dictionary)
 
 	if rotation, ok := page["/Rotate"]; ok {
@@ -656,7 +656,7 @@ func (parser *PDFParser) _getPageRotation(pageObj Value) (error, Value) {
 
 	if parentObj, ok := page["/Parent"]; ok {
 		parent := parser.resolveObject(parentObj)
-		err, parentRotation := parser._getPageRotation(parent.Values[0])
+		err, parentRotation := parser.getPageRotation(parent.Values[0])
 		if err != nil {
 			return err, nil
 		}

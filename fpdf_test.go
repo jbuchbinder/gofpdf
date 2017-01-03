@@ -29,9 +29,9 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/jung-kurt/gofpdf"
-	"github.com/jung-kurt/gofpdf/internal/example"
-	"github.com/jung-kurt/gofpdf/internal/files"
+	"github.com/jbuchbinder/gofpdf"
+	"github.com/jbuchbinder/gofpdf/internal/example"
+	"github.com/jbuchbinder/gofpdf/internal/files"
 )
 
 // Absolute path needed for gocov tool; relative OK for test
@@ -1245,7 +1245,7 @@ func ExampleFpdf_CellFormat_align() {
 				pdf.CellFormat(170, 257, rec.txt, borderStr, 0, rec.align, false, 0, linkStr)
 				borderStr = ""
 			}
-			linkStr = "https://github.com/jung-kurt/gofpdf"
+			linkStr = "https://github.com/jbuchbinder/gofpdf"
 		}
 	}
 	pdf := gofpdf.New("P", "mm", "A4", "") // A4 210.0 x 297.0
@@ -1453,7 +1453,7 @@ func ExampleFpdf_RegisterImageReader() {
 		wd       = 210
 		ht       = 297
 		fontSize = 15
-		urlStr   = "https://github.com/jung-kurt/gofpdf/blob/master/image/gofpdf.png?raw=true"
+		urlStr   = "https://github.com/jbuchbinder/gofpdf/blob/master/image/gofpdf.png?raw=true"
 		msgStr   = `Images from the web can be easily embedded when a PDF document is generated.`
 	)
 

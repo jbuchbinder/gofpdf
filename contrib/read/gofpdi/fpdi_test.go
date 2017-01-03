@@ -2,9 +2,9 @@ package gofpdi_test
 
 import (
 	"fmt"
-	"github.com/jung-kurt/gofpdf"
-	"github.com/jung-kurt/gofpdf/contrib/read/gofpdi"
-	"github.com/jung-kurt/gofpdf/internal/example"
+	"github.com/jbuchbinder/gofpdf"
+	"github.com/jbuchbinder/gofpdf/contrib/read/gofpdi"
+	"github.com/jbuchbinder/gofpdf/internal/example"
 	// "os"
 	// "bufio"
 	// "bytes"

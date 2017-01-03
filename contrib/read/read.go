@@ -1,7 +1,7 @@
 package read
 
 import (
-	"github.com/jung-kurt/gofpdf"
+	"github.com/jbuchbinder/gofpdf"
 )
 
 func Open(filename string) {

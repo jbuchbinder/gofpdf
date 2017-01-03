@@ -29,7 +29,7 @@ import (
 	"github.com/boombuler/barcode/ean"
 	"github.com/boombuler/barcode/qr"
 	"github.com/boombuler/barcode/twooffive"
-	"github.com/jung-kurt/gofpdf"
+	"github.com/jbuchbinder/gofpdf"
 	"github.com/ruudk/golang-pdf417"
 	"image/jpeg"
 	"io"

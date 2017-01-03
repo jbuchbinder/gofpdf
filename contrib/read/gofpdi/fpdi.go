@@ -22,7 +22,7 @@ import (
 	// "math"
 	// "strconv"
 	"os"
-	"github.com/jung-kurt/gofpdf"
+	"github.com/jbuchbinder/gofpdf"
 	"strings"
 	"strconv"
 	"math"

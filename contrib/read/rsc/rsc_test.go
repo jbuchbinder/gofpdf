@@ -1,9 +1,9 @@
 package rsc_test
 
 import (
-	"github.com/jung-kurt/gofpdf"
-	"github.com/jung-kurt/gofpdf/contrib/read/rsc"
-	"github.com/jung-kurt/gofpdf/internal/example"
+	"github.com/jbuchbinder/gofpdf"
+	"github.com/jbuchbinder/gofpdf/contrib/read/rsc"
+	"github.com/jbuchbinder/gofpdf/internal/example"
 	"rsc.io/pdf"
 	"fmt"
 )
