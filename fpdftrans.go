@@ -193,7 +193,7 @@ func (f *Fpdf) TransformSkew(angleX, angleY, x, y float64) {
 // methods such as TransformRotate() and TransformMirrorVertical() instead.
 func (f *Fpdf) Transform(tm TransformMatrix) {
 	if f.transformNest > 0 {
-		f.outf("%.5f %.5f %.5f %.5f %.5f %.5f cm",
+		f.outf("%.10f %.10f %.10f %.10f %.10f %.10f cm",
 			tm.A, tm.B, tm.C, tm.D, tm.E, tm.F)
 	} else if f.err == nil {
 		f.err = fmt.Errorf("transformation context is not active")
