@@ -19,7 +19,14 @@ package gofpdf
 import (
 	"bytes"
 	"fmt"
+	"image/png"
+	"io/ioutil"
+	"log"
+	"os"
+	"path"
 	"strings"
+
+	"github.com/foobaz/lossypng/lossypng"
 )
 
 func (f *Fpdf) pngColorSpace(ct byte) (colspace string, colorVal int) {
@@ -38,7 +45,9 @@ func (f *Fpdf) pngColorSpace(ct byte) (colspace string, colorVal int) {
 	return
 }
 
-func (f *Fpdf) parsepngstream(buf *bytes.Buffer, readdpi bool) (info *ImageInfoType) {
+func (f *Fpdf) parsepngstream(buf *bytes.Buffer, readdpi bool, firstAttempt bool) (info *ImageInfoType) {
+	newBuffer := bytes.NewBuffer(buf.Bytes())
+
 	info = f.newImageInfo()
 	// 	Check signature
 	if string(buf.Next(8)) != "\x89PNG\x0d\x0a\x1a\x0a" {
@@ -55,7 +64,52 @@ func (f *Fpdf) parsepngstream(buf *bytes.Buffer, readdpi bool) (info *ImageInfoT
 	h := f.readBeInt32(buf)
 	bpc := f.readByte(buf)
 	if bpc > 8 {
-		f.err = fmt.Errorf("16-bit depth not supported in PNG file")
+		if firstAttempt == false {
+			f.err = fmt.Errorf("16-bit depth not supported in PNG file")
+		} else {
+			var colorConversion lossypng.ColorConversion
+
+			decoded, err := png.Decode(newBuffer)
+			if err != nil {
+				fmt.Printf("couldn't decode buffer: %v\n", err)
+				return
+			}
+
+			optimized := lossypng.Compress(decoded, colorConversion, 20)
+
+			// save optimized image
+			outPath := pathWithSuffix(f.title, "-lossy.png")
+			outFile, err := os.Create(outPath)
+			if err != nil {
+				fmt.Printf("couldn't create %v: %v\n", outPath, err)
+				return
+			}
+
+			err = png.Encode(outFile, optimized)
+			outFile.Close()
+			if err != nil {
+				fmt.Printf("couldn't encode file: %v\n", err)
+				return
+			}
+
+			file, err := os.Open(outPath)
+			if err != nil {
+				log.Println(err)
+				return
+			}
+			defer func() {
+				file.Close()
+				os.Remove(outPath)
+			}()
+
+			data, err := ioutil.ReadAll(file)
+			if err != nil {
+				log.Println(err)
+				return
+			}
+
+			return f.parsepngstream(bytes.NewBuffer(data), readdpi, false)
+		}
 	}
 	ct := f.readByte(buf)
 	var colspace string
@@ -210,4 +264,16 @@ func (f *Fpdf) parsepngstream(buf *bytes.Buffer, readdpi bool) (info *ImageInfoT
 	}
 	info.data = data
 	return
+}
+
+func pathWithSuffix(filePath string, suffix string) string {
+	extension := path.Ext(filePath)
+	insertion := len(extension)
+	if insertion > 0 {
+		// if extension exists, trim it off of the base filename
+		insertion = strings.LastIndex(filePath, extension)
+	} else {
+		insertion = len(filePath)
+	}
+	return filePath[:insertion] + suffix
 }
