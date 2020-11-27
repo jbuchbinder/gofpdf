@@ -78,20 +78,11 @@ Installation
 
 To install the package on your system, run
 
-<<<<<<< HEAD
 	go get github.com/jbuchbinder/gofpdf
 
 Later, to receive updates, run
 
 	go get -u -v github.com/jbuchbinder/gofpdf/...
-=======
-    go get github.com/jung-kurt/gofpdf
-
-Later, to receive updates, run
-
-    go get -u -v github.com/jung-kurt/gofpdf/...
-
->>>>>>> a2a0e7f8a28b2eabe1a32097f0071a0f715a8102
 
 Quick Start
 

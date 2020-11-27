@@ -67,22 +67,6 @@ func cleanup() {
 		})
 }
 
-<<<<<<< HEAD
-func imageFile(fileStr string) string {
-	return filepath.Join(cnImgDir, fileStr)
-}
-
-func fontFile(fileStr string) string {
-	return filepath.Join(cnFontDir, fileStr)
-}
-
-func textFile(fileStr string) string {
-	return filepath.Join(cnTextDir, fileStr)
-}
-
-func exampleFile(fileStr string) string {
-	return filepath.Join(cnExampleDir, fileStr)
-=======
 func TestFpdfImplementPdf(t *testing.T) {
 	// this will not compile if Fpdf and Tpl
 	// do not implement Pdf
@@ -269,7 +253,6 @@ func TestFooterFuncLpi(t *testing.T) {
 	if f > l {
 		t.Errorf("index %d (%s) should less than index %d (%s)", f, firstPageOnly, l, lastPageOnly)
 	}
->>>>>>> a2a0e7f8a28b2eabe1a32097f0071a0f715a8102
 }
 
 type fontResourceType struct {
@@ -312,7 +295,6 @@ func lorem() string {
 	return strings.Join(loremList(), " ")
 }
 
-<<<<<<< HEAD
 func exampleFilename(baseStr string) string {
 	return filepath.Join(cnExampleDir, baseStr+".pdf")
 }
@@ -326,10 +308,7 @@ func summary(err error, fileStr string) {
 	}
 }
 
-// This example demonstrates the generation of a simple PDF document. Note that
-=======
 // Example demonstrates the generation of a simple PDF document. Note that
->>>>>>> a2a0e7f8a28b2eabe1a32097f0071a0f715a8102
 // since only core fonts are used (in this case Arial, a synonym for
 // Helvetica), an empty string can be specified for the font directory in the
 // call to New(). Note also that the example.Filename() and example.Summary()
@@ -353,14 +332,9 @@ func Example() {
 // ExampleFpdf_AddPage demonsrates the generation of headers, footers and page breaks.
 func ExampleFpdf_AddPage() {
 	pdf := gofpdf.New("P", "mm", "A4", "")
-<<<<<<< HEAD
-	pdf.SetHeaderFunc(func() {
-		pdf.Image(imageFile("logo.png"), 10, 6, 30, 0, false, "", 0, "")
-=======
 	pdf.SetTopMargin(30)
 	pdf.SetHeaderFuncMode(func() {
 		pdf.Image(example.ImageFile("logo.png"), 10, 6, 30, 0, false, "", 0, "")
->>>>>>> a2a0e7f8a28b2eabe1a32097f0071a0f715a8102
 		pdf.SetY(5)
 		pdf.SetFont("Arial", "B", 15)
 		pdf.Cell(80, 0, "")
@@ -1242,9 +1216,6 @@ func ExampleFpdf_ClipText() {
 	pdf.MultiCell(130, 5, lorem(), "", "", false)
 	pdf.ClipEnd()
 
-<<<<<<< HEAD
-	fileStr := exampleFilename("Fpdf_ClipText")
-=======
 	y += 30
 	pdf.SetDrawColor(180, 100, 180)
 	pdf.ClipRoundedRectExt(10, y, 120, 20, 5, 10, 5, 10, true)
@@ -1256,7 +1227,6 @@ func ExampleFpdf_ClipText() {
 	pdf.ClipEnd()
 
 	fileStr := example.Filename("Fpdf_ClipText")
->>>>>>> a2a0e7f8a28b2eabe1a32097f0071a0f715a8102
 	err := pdf.OutputFileAndClose(fileStr)
 	summary(err, fileStr)
 	// Output:

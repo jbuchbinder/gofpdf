@@ -1,4 +1,4 @@
-# gofpdf
+# GoFPDF Document Generator
 
 ![gofpdf](image/logo_gofpdf.jpg?raw=true "gofpdf")
 
@@ -11,30 +11,42 @@ text, drawing and images.
 
 ##Features
 
-* Choice of measurement unit, page format and margins
-* Page header and footer management
-* Automatic page breaks, line breaks, and text justification
-* Inclusion of JPEG, PNG, GIF, TIFF and basic path-only SVG images
-* Colors, gradients and alpha channel transparency
-* Outline bookmarks
-* Internal and external links
-* TrueType, Type1 and encoding support
-* Page compression
-* Lines, Bézier curves, arcs, and ellipses
-* Rotation, scaling, skewing, translation, and mirroring
-* Clipping
-* Document protection
-* Layers
-* Templates
-* Barcodes
+  - UTF-8 support
+  - Choice of measurement unit, page format and margins
+  - Page header and footer management
+  - Automatic page breaks, line breaks, and text justification
+  - Inclusion of JPEG, PNG, GIF, TIFF and basic path-only SVG images
+  - Colors, gradients and alpha channel transparency
+  - Outline bookmarks
+  - Internal and external links
+  - TrueType, Type1 and encoding support
+  - Page compression
+  - Lines, Bézier curves, arcs, and ellipses
+  - Rotation, scaling, skewing, translation, and mirroring
+  - Clipping
+  - Document protection
+  - Layers
+  - Templates
+  - Barcodes
+  - Charting facility
+  - Import PDFs as templates
 
 gofpdf has no dependencies other than the Go standard library. All tests pass
 on Linux, Mac and Windows platforms. Like FPDF version 1.7, from which gofpdf
 is derived, this package does not yet support UTF-8 fonts. However, support is
 provided to translate UTF-8 runes to code page encodings.
 
-##Installation
+gofpdf supports UTF-8 TrueType fonts and “right-to-left” languages. Note
+that Chinese, Japanese, and Korean characters may not be included in
+many general purpose fonts. For these languages, a specialized font (for
+example,
+[NotoSansSC](https://github.com/jsntn/webfonts/blob/master/NotoSansSC-Regular.ttf)
+for simplified Chinese) can be used.
 
+Also, support is provided to automatically translate UTF-8 runes to code
+page encodings for languages that have fewer than 256 glyphs.
+
+## Installation
 
 To install the package on your system, run
 
@@ -59,9 +71,6 @@ pdf.SetFont("Arial", "B", 16)
 pdf.Cell(40, 10, "Hello, world")
 err := pdf.OutputFileAndClose("hello.pdf")
 ```
-
-See the functions in the [fpdf_test.go](https://github.com/jbuchbinder/gofpdf/blob/master/fpdf_test.go) file (shown as examples in this
-documentation) for more advanced PDF examples.
 
 See the functions in the
 [fpdf\_test.go](https://github.com/jbuchbinder/gofpdf/blob/master/fpdf_test.go)
@@ -183,7 +192,7 @@ Here are guidelines for making submissions. Your change should
   - be properly documented
   - be formatted with `go fmt`
   - include an example in
-    [fpdf\_test.go](https://github.com/jung-kurt/gofpdf/blob/master/fpdf_test.go)
+    [fpdf\_test.go](https://github.com/jbuchbinder/gofpdf/blob/master/fpdf_test.go)
     if appropriate
   - conform to the standards of [golint](https://github.com/golang/lint)
     and [go vet](https://golang.org/cmd/vet/), that is, `golint .` and
@@ -195,11 +204,12 @@ are the preferred means of accepting your changes.
 
 ## License
 
-gofpdf is released under the MIT License. It is copyrighted by Kurt Jung
+gofpdf is released under the MIT License. It is copyrighted by Dave Barnes
 and the contributors acknowledged below.
 
 ## Acknowledgments
 
+Thank you to Kurt Jung who originally wrote gofpdf in 2013 - 2019.
 This package’s code and documentation are closely derived from the
 [FPDF](http://www.fpdf.org/) library created by Olivier Plathey, and a
 number of font and image resources are copied directly from it. Bruno
@@ -216,7 +226,6 @@ product. Lawrence Kesteloot provided code to allow an image’s extent to
 be determined prior to placement. Support for vertical alignment within
 a cell was provided by Stefan Schroeder. Ivan Daniluk generalized the
 font and image loading code to use the Reader interface while
->>>>>>> a2a0e7f8a28b2eabe1a32097f0071a0f715a8102
 maintaining backward compatibility. Anthony Starks provided code for the
 Polygon function. Robert Lillack provided the Beziergon function and
 corrected some naming issues with the internal curve function. Claudio
