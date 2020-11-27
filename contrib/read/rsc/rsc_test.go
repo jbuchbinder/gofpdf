@@ -1,13 +1,12 @@
 package rsc_test
 
 import (
+	"fmt"
 	"github.com/jbuchbinder/gofpdf"
 	"github.com/jbuchbinder/gofpdf/contrib/read/rsc"
 	"github.com/jbuchbinder/gofpdf/internal/example"
 	"rsc.io/pdf"
-	"fmt"
 )
-
 
 func ExampleRead() {
 	filename := example.Filename("Fpdf_AddPage")
@@ -20,7 +19,6 @@ func ExampleRead() {
 	// page
 	page := reader.Page(1)
 	template := rsc.PageToTemplate(&page)
-
 
 	pdf := gofpdf.New("P", "mm", "A4", "")
 	pdf.AddPage()

@@ -5,5 +5,5 @@ import (
 )
 
 func Open(filename string) {
-	
+
 }

@@ -244,12 +244,11 @@ func (r ObjectDeclaration) Equals(v Value) bool {
 	return ok && r.Equals(r2) // r.obj == r2.obj && r.gen == r2.gen
 }
 
-
 // Object is a object
 type Object struct {
-	Obj    int
-	Gen    int
-	Value  Value
+	Obj   int
+	Gen   int
+	Value Value
 }
 
 // Type of a ObjectRef value

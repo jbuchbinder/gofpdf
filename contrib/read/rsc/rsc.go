@@ -11,7 +11,7 @@ func PageToTemplate(page *rsc.Page) gofpdf.Template {
 }
 
 type RscTemplate struct {
-	Id int64
+	Id   int64
 	Page *rsc.Page
 }
 
@@ -20,7 +20,7 @@ func (tpl RscTemplate) ID() int64 {
 }
 
 func (tpl RscTemplate) Size() (gofpdf.PointType, gofpdf.SizeType) {
-	
+
 	return gofpdf.PointType{}, gofpdf.SizeType{}
 }
 

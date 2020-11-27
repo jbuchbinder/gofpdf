@@ -298,7 +298,7 @@ func splitTokens(data []byte, atEOF bool) (advance int, token []byte, err error)
 		// determine which it is and return the token
 		b2 := data[offset+1]
 		if b2 == b {
-			return 3, data[offset:offset+2], nil
+			return 3, data[offset : offset+2], nil
 		}
 		return 2, []byte{b}, nil
 

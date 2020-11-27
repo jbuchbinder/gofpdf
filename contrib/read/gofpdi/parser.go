@@ -18,22 +18,21 @@ package gofpdi
  */
 
 import (
-	"fmt"
-	"os"
-	"strings"
-	// "regexp"
 	"bytes"
-	"strconv"
-	// "bufio"
-	"errors"
-	"github.com/jbuchbinder/gofpdf"
-	"math"
-	"compress/zlib"
 	"compress/lzw"
+	"compress/zlib"
 	"encoding/ascii85"
-	"io"
-	"regexp"
 	"encoding/hex"
+	"errors"
+	"fmt"
+	"io"
+	"math"
+	"os"
+	"regexp"
+	"strconv"
+	"strings"
+
+	"github.com/jbuchbinder/gofpdf"
 )
 
 const (
@@ -49,14 +48,14 @@ type PDFParser struct {
 	pages           []PDFPage       // already loaded pages
 
 	xref struct {
-						maxObject    int                 // the highest xref object number
-						xrefLocation int64               // the location of the xref table
-						xref         map[ObjectRef]int64 // all the xref offsets
-						trailer Dictionary
-		 }
-	currentObject ObjectDeclaration
+		maxObject    int                 // the highest xref object number
+		xrefLocation int64               // the location of the xref table
+		xref         map[ObjectRef]int64 // all the xref offsets
+		trailer      Dictionary
+	}
+	currentObject     ObjectDeclaration
 	currentDictionary Dictionary
-	root Dictionary
+	root              Dictionary
 }
 
 // OpenPDFParser opens an existing PDF file and readies it
@@ -127,11 +126,11 @@ type PDFPage struct {
 // k is a scaling factor from user space units to points
 func (parser *PDFParser) GetPageBoxes(pageNumber int, k float64) PageBoxes {
 	boxes := make(map[string]*PageBox, 5)
-	if pageNumber < 0 || (pageNumber - 1) >= len(parser.pages) {
+	if pageNumber < 0 || (pageNumber-1) >= len(parser.pages) {
 		return PageBoxes{boxes, DefaultBox}
 	}
 
-	page := parser.pages[pageNumber - 1]
+	page := parser.pages[pageNumber-1]
 	if box := parser.getPageBox(page.Dictionary, MediaBox, k); box != nil {
 		boxes[MediaBox] = box
 	}
@@ -165,7 +164,7 @@ func (parser *PDFParser) getPageBox(pageObj Dictionary, boxIndex string, k float
 
 		// If box is a reference, resolve it.
 		if boxRef.Type() == typeObjRef {
-			box = parser.resolveObject(boxRef);
+			box = parser.resolveObject(boxRef)
 			if box == nil {
 				return nil
 			}
@@ -181,8 +180,8 @@ func (parser *PDFParser) getPageBox(pageObj Dictionary, boxIndex string, k float
 			boxDetails := box.(Array)
 			x := float64(boxDetails[0].(Real)) / k
 			y := float64(boxDetails[1].(Real)) / k
-			w := math.Abs(float64(boxDetails[0].(Real)) - float64(boxDetails[2].(Real))) / k
-			h := math.Abs(float64(boxDetails[1].(Real)) - float64(boxDetails[3].(Real))) / k
+			w := math.Abs(float64(boxDetails[0].(Real))-float64(boxDetails[2].(Real))) / k
+			h := math.Abs(float64(boxDetails[1].(Real))-float64(boxDetails[3].(Real))) / k
 			llx := math.Min(float64(boxDetails[0].(Real)), float64(boxDetails[2].(Real))) / k
 			lly := math.Min(float64(boxDetails[1].(Real)), float64(boxDetails[3].(Real))) / k
 			urx := math.Max(float64(boxDetails[0].(Real)), float64(boxDetails[2].(Real))) / k
@@ -317,13 +316,13 @@ func (parser *PDFParser) readXrefTable(offset int64) error {
 }
 
 // readRoot reads the object reference for the root.
-func (parser *PDFParser) readRoot() (error) {
+func (parser *PDFParser) readRoot() error {
 	if rootRef, ok := parser.xref.trailer["/Root"]; ok {
 		if rootRef.Type() != typeObjRef {
 			return errors.New("Wrong Type of Root-Element! Must be an indirect reference")
 		}
 
-		root := parser.resolveObject(rootRef);
+		root := parser.resolveObject(rootRef)
 		if root == nil {
 			return errors.New("Could not find reference to root")
 		}
@@ -341,7 +340,7 @@ func (parser *PDFParser) getPagesObj() (Dictionary, error) {
 			return nil, errors.New("Wrong Type of Pages-Element! Must be an indirect reference")
 		}
 
-		pages := parser.resolveObject(pagesRef);
+		pages := parser.resolveObject(pagesRef)
 		if pages == nil {
 			return nil, errors.New("Could not find reference to pages")
 		}
@@ -352,7 +351,7 @@ func (parser *PDFParser) getPagesObj() (Dictionary, error) {
 }
 
 // readPages parses the PDF Page Object into PDFPages
-func (parser *PDFParser) readPages(pages Dictionary) (error) {
+func (parser *PDFParser) readPages(pages Dictionary) error {
 	var kids Array
 	if kidsRef, ok := pages["/Kids"]; ok {
 		if kidsRef.Type() != typeArray {
@@ -368,7 +367,7 @@ func (parser *PDFParser) readPages(pages Dictionary) (error) {
 	}
 
 	for k, val := range kids {
-		pageObj := parser.resolveObject(val);
+		pageObj := parser.resolveObject(val)
 		if pageObj == nil {
 			return errors.New(fmt.Sprintf("Could not find reference to page %i", (k + 1)))
 		}
@@ -417,9 +416,9 @@ func (parser *PDFParser) readValue(token Token) Value {
 		// Skip one line for dictionary.
 		for validToken {
 			key := parser.reader.ReadToken()
-			if (key.Equals(Token(">>"))) {
+			if key.Equals(Token(">>")) {
 				validToken = false
-				break;
+				break
 			}
 
 			if key == nil {
@@ -456,7 +455,7 @@ func (parser *PDFParser) readValue(token Token) Value {
 			// We peek here, as the token could be the value.
 			token := parser.reader.ReadToken()
 			if token.Equals(Token("]")) {
-				break;
+				break
 			}
 
 			value := parser.readValue(token)
@@ -640,7 +639,7 @@ func (parser *PDFParser) getPageRotation() (error, Value) {
 		}
 	}
 
-	return errors.New(fmt.Sprintf("Page %s does not exists.", parser.pageNumber - 1)), nil
+	return errors.New(fmt.Sprintf("Page %s does not exists.", parser.pageNumber-1)), nil
 }
 
 // getPageRotation reads the page rotation for a specific page.
@@ -683,7 +682,7 @@ func (parser *PDFParser) getPageResources() (error, []Value) {
 		}
 	}
 
-	return errors.New(fmt.Sprintf("Page %s does not exists.", parser.pageNumber - 1)), nil
+	return errors.New(fmt.Sprintf("Page %s does not exists.", parser.pageNumber-1)), nil
 }
 
 // _getPageResources reads the page resources for a specific page.
@@ -733,7 +732,7 @@ func (parser *PDFParser) getContent() (error, []byte) {
 		}
 	}
 
-	return errors.New(fmt.Sprintf("Page %s does not exists.", parser.pageNumber - 1)), nil
+	return errors.New(fmt.Sprintf("Page %s does not exists.", parser.pageNumber-1)), nil
 }
 
 // _getPageContent reads the page resources for a specific page.
@@ -773,7 +772,7 @@ func (parser *PDFParser) _unFilterStream(content []Value) []byte {
 	stream := content[1].(Stream)
 
 	for _, filter := range useFilters {
-		switch (filter) {
+		switch filter {
 		case "/Fl":
 		case "/FlateDecode":
 			var out bytes.Buffer
@@ -808,7 +807,7 @@ func (parser *PDFParser) _unFilterStream(content []Value) []byte {
 			hexstring = re.ReplaceAllString(hexstring, "")
 			hexstring = strings.TrimRight(hexstring, ">")
 			if (len(hexstring) % 2) == 1 {
-				hexstring += "0";
+				hexstring += "0"
 			}
 
 			out, err := hex.DecodeString(hexstring)

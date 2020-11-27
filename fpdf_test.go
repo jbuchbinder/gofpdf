@@ -260,7 +260,7 @@ type fontResourceType struct {
 
 func (f fontResourceType) Open(name string) (rdr io.Reader, err error) {
 	var buf []byte
-	buf, err = ioutil.ReadFile(fontFile(name))
+	buf, err = ioutil.ReadFile(example.FontFile(name))
 	if err == nil {
 		rdr = bytes.NewReader(buf)
 		fmt.Printf("Generalized font loader reading %s\n", name)
@@ -428,8 +428,8 @@ func ExampleFpdf_MultiCell() {
 		chapterTitle(chapNum, titleStr)
 		chapterBody(fileStr)
 	}
-	printChapter(1, "A RUNAWAY REEF", textFile("20k_c1.txt"))
-	printChapter(2, "THE PROS AND CONS", textFile("20k_c2.txt"))
+	printChapter(1, "A RUNAWAY REEF", example.TextFile("20k_c1.txt"))
+	printChapter(2, "THE PROS AND CONS", example.TextFile("20k_c2.txt"))
 	fileStr := exampleFilename("Fpdf_MultiCell")
 	err := pdf.OutputFileAndClose(fileStr)
 	summary(err, fileStr)
@@ -534,8 +534,8 @@ func ExampleFpdf_SetLeftMargin() {
 		pdf.CellFormat(0, 10, fmt.Sprintf("Page %d", pdf.PageNo()),
 			"", 0, "C", false, 0, "")
 	})
-	printChapter(1, "A RUNAWAY REEF", textFile("20k_c1.txt"))
-	printChapter(2, "THE PROS AND CONS", textFile("20k_c2.txt"))
+	printChapter(1, "A RUNAWAY REEF", example.TextFile("20k_c1.txt"))
+	printChapter(2, "THE PROS AND CONS", example.TextFile("20k_c2.txt"))
 	fileStr := exampleFilename("Fpdf_SetLeftMargin_multicolumn")
 	err := pdf.OutputFileAndClose(fileStr)
 	summary(err, fileStr)
@@ -746,7 +746,7 @@ func ExampleFpdf_CellFormat_tables() {
 		pdf.SetX(left)
 		pdf.CellFormat(wSum, 0, "", "T", 0, "", false, 0, "")
 	}
-	loadData(textFile("countries.txt"))
+	loadData(example.TextFile("countries.txt"))
 	pdf.SetFont("Arial", "", 14)
 	pdf.AddPage()
 	basicTable()
@@ -777,7 +777,7 @@ func ExampleFpdf_HTMLBasicNew() {
 	// Second page: image link and basic HTML with link
 	pdf.AddPage()
 	pdf.SetLink(link, 0, -1)
-	pdf.Image(imageFile("logo.png"), 10, 12, 30, 0, false, "", 0, "http://www.fpdf.org")
+	pdf.Image(example.ImageFile("logo.png"), 10, 12, 30, 0, false, "", 0, "http://www.fpdf.org")
 	pdf.SetLeftMargin(45)
 	pdf.SetFontSize(14)
 	_, lineHt = pdf.GetFontSize()
@@ -843,15 +843,15 @@ func ExampleFpdf_Image() {
 	pdf := gofpdf.New("P", "mm", "A4", "")
 	pdf.AddPage()
 	pdf.SetFont("Arial", "", 11)
-	pdf.Image(imageFile("logo.png"), 10, 10, 30, 0, false, "", 0, "")
+	pdf.Image(example.ImageFile("logo.png"), 10, 10, 30, 0, false, "", 0, "")
 	pdf.Text(50, 20, "logo.png")
-	pdf.Image(imageFile("logo.gif"), 10, 40, 30, 0, false, "", 0, "")
+	pdf.Image(example.ImageFile("logo.gif"), 10, 40, 30, 0, false, "", 0, "")
 	pdf.Text(50, 50, "logo.gif")
-	pdf.Image(imageFile("logo-gray.png"), 10, 70, 30, 0, false, "", 0, "")
+	pdf.Image(example.ImageFile("logo-gray.png"), 10, 70, 30, 0, false, "", 0, "")
 	pdf.Text(50, 80, "logo-gray.png")
-	pdf.Image(imageFile("logo-rgb.png"), 10, 100, 30, 0, false, "", 0, "")
+	pdf.Image(example.ImageFile("logo-rgb.png"), 10, 100, 30, 0, false, "", 0, "")
 	pdf.Text(50, 110, "logo-rgb.png")
-	pdf.Image(imageFile("logo.jpg"), 10, 130, 30, 0, false, "", 0, "")
+	pdf.Image(example.ImageFile("logo.jpg"), 10, 130, 30, 0, false, "", 0, "")
 	pdf.Text(50, 140, "logo.jpg")
 	fileStr := exampleFilename("Fpdf_Image")
 	err := pdf.OutputFileAndClose(fileStr)
@@ -955,9 +955,9 @@ func ExampleFpdf_SetAcceptPageBreakFunc() {
 	pdf.SetFont("Times", "", 12)
 	for j := 0; j < 20; j++ {
 		if j == 1 {
-			pdf.Image(imageFile("fpdf.png"), -1, 0, colWd, 0, true, "", 0, "")
+			pdf.Image(example.ImageFile("fpdf.png"), -1, 0, colWd, 0, true, "", 0, "")
 		} else if j == 5 {
-			pdf.Image(imageFile("golang-gopher.png"),
+			pdf.Image(example.ImageFile("golang-gopher.png"),
 				-1, 0, colWd, 0, true, "", 0, "")
 		}
 		pdf.MultiCell(colWd, 5, loremStr, "", "", false)
@@ -974,8 +974,8 @@ func ExampleFpdf_SetAcceptPageBreakFunc() {
 func ExampleFpdf_SetKeywords() {
 	var err error
 	fileStr := exampleFilename("Fpdf_SetKeywords")
-	err = gofpdf.MakeFont(fontFile("CalligrapherRegular.pfb"),
-		fontFile("cp1252.map"), cnFontDir, nil, true)
+	err = gofpdf.MakeFont(example.FontFile("CalligrapherRegular.pfb"),
+		example.FontFile("cp1252.map"), cnFontDir, nil, true)
 	if err == nil {
 		pdf := gofpdf.New("", "", "", "")
 		pdf.SetFontLocation(example.FontDir())
@@ -1115,7 +1115,7 @@ func ExampleFpdf_SetAlpha() {
 			pdf.SetXY(x, y+2)
 			pdf.CellFormat(rectW, rectH, "A", "", 0, "C", false, 0, "")
 			pdf.SetAlpha(0.5, modeList[j])
-			pdf.Image(imageFile("golang-gopher.png"),
+			pdf.Image(example.ImageFile("golang-gopher.png"),
 				x-gapX, y, rectW+2*gapX, 0, false, "", 0, "")
 			pdf.SetAlpha(1.0, "Normal")
 			x += rectW + gapX
@@ -1191,7 +1191,7 @@ func ExampleFpdf_ClipText() {
 
 	y += 28
 	pdf.ClipEllipse(26, y+10, 16, 10, true)
-	pdf.Image(imageFile("logo.jpg"), 10, y, 32, 0, false, "JPG", 0, "")
+	pdf.Image(example.ImageFile("logo.jpg"), 10, y, 32, 0, false, "JPG", 0, "")
 	pdf.ClipEnd()
 
 	pdf.ClipCircle(60, y+10, 10, true)
@@ -1432,7 +1432,7 @@ func ExampleFpdf_RegisterImage() {
 	pdf.SetMargins(10, 10, 10)
 	pdf.SetFont("Helvetica", "", 15)
 	for j, str := range fileList {
-		imageFileStr = imageFile(str)
+		imageFileStr = example.ImageFile(str)
 		infoPtr = pdf.RegisterImage(imageFileStr, "")
 		imgWd, imgHt = infoPtr.Extent()
 		switch j {
@@ -1457,7 +1457,7 @@ func ExampleFpdf_RegisterImage() {
 	fileStr := exampleFilename("Fpdf_RegisterImage")
 	// Test the image information retrieval method
 	infoShow := func(imageStr string) {
-		imageStr = imageFile(imageStr)
+		imageStr = example.ImageFile(imageStr)
 		info := pdf.GetImageInfo(imageStr)
 		if info != nil {
 			if info.Width() > 0.0 {
@@ -1534,7 +1534,7 @@ func ExampleFpdf_SVGBasicWrite() {
 		`web control is supported and is used in this example.`
 	html := pdf.HTMLBasicNew()
 	html.Write(lineHt, htmlStr)
-	sig, err = gofpdf.SVGBasicFileParse(imageFile(sigFileStr))
+	sig, err = gofpdf.SVGBasicFileParse(example.ImageFile(sigFileStr))
 	if err == nil {
 		scale := 100 / sig.Wd
 		scaleY := 30 / sig.Ht
@@ -2086,7 +2086,7 @@ func ExampleFpdf_CreateTemplate() {
 	pdf.SetCompression(false)
 	// pdf.SetFont("Times", "", 12)
 	template := pdf.CreateTemplate(func(tpl *gofpdf.Tpl) {
-		tpl.Image(imageFile("logo.png"), 6, 6, 30, 0, false, "", 0, "")
+		tpl.Image(example.ImageFile("logo.png"), 6, 6, 30, 0, false, "", 0, "")
 		tpl.SetFont("Arial", "B", 16)
 		tpl.Text(40, 20, "Template says hello")
 		tpl.SetDrawColor(0, 100, 200)
@@ -2100,7 +2100,7 @@ func ExampleFpdf_CreateTemplate() {
 	template2 := pdf.CreateTemplate(func(tpl *gofpdf.Tpl) {
 		tpl.UseTemplate(template)
 		subtemplate := tpl.CreateTemplate(func(tpl2 *gofpdf.Tpl) {
-			tpl2.Image(imageFile("logo.png"), 6, 86, 30, 0, false, "", 0, "")
+			tpl2.Image(example.ImageFile("logo.png"), 6, 86, 30, 0, false, "", 0, "")
 			tpl2.SetFont("Arial", "B", 16)
 			tpl2.Text(40, 100, "Subtemplate says hello")
 			tpl2.SetDrawColor(0, 200, 100)

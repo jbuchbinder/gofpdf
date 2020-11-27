@@ -1,9 +1,6 @@
 package gofpdi
 
 import (
-	// "fmt"
-	// "math"
-	// "strconv"
 	"github.com/jbuchbinder/gofpdf"
 )
 

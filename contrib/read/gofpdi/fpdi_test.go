@@ -2,13 +2,11 @@ package gofpdi_test
 
 import (
 	"fmt"
+	"time"
+
 	"github.com/jbuchbinder/gofpdf"
 	"github.com/jbuchbinder/gofpdf/contrib/read/gofpdi"
 	"github.com/jbuchbinder/gofpdf/internal/example"
-	// "os"
-	// "bufio"
-	// "bytes"
-	"time"
 )
 
 // ExampleRead tests the ability to read an existing PDF file

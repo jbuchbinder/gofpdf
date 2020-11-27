@@ -26,7 +26,7 @@ type TemplatePage struct {
 	id            int64           // a unique template ID
 	pageSize      gofpdf.SizeType // the size of the page
 	k             float64         // scale factor (number of points in user unit)
-	parser 	      *PDFParser
+	parser        *PDFParser
 	resources     []Value
 	buffer        []byte
 	box           *PageBox

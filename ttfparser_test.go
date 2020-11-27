@@ -21,7 +21,6 @@ import (
 	"fmt"
 
 	"github.com/jbuchbinder/gofpdf"
-	"github.com/jbuchbinder/gofpdf/internal/example"
 )
 
 func ExampleTtfParse() {

@@ -18,14 +18,12 @@ package gofpdi
  */
 
 import (
-	// "fmt"
-	// "math"
-	// "strconv"
-	"os"
-	"github.com/jbuchbinder/gofpdf"
-	"strings"
-	"strconv"
 	"math"
+	"os"
+	"strconv"
+	"strings"
+
+	"github.com/jbuchbinder/gofpdf"
 )
 
 // Fpdi represents a PDF file parser which can load templates to use in other documents
@@ -36,7 +34,6 @@ type Fpdi struct {
 	pdfVersion      string     // the PDF version
 	k               float64    // default scale factor (number of points in user unit)
 }
-
 
 // Open makes an existing PDF file usable for templates
 func Open(file *os.File) (*Fpdi, error) {
@@ -120,7 +117,7 @@ func (td *Fpdi) ImportPage(pageNumber int, boxName string, groupXObject bool) go
 	t.y = 0
 
 	// groupXObject only works => 1.4
-	if (t.groupXObject) {
+	if t.groupXObject {
 		i, _ := strconv.ParseFloat(td.pdfVersion, 64)
 		i2 := 1.4
 		td.pdfVersion = strconv.FormatFloat(math.Max(i, i2), 'f', 12, 64)
